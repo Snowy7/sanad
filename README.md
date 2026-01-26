@@ -360,7 +360,9 @@ npm run lint     # Run ESLint
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+This project is licensed under the **CC BY-NC-ND 4.0** (Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International) license. See [LICENSE](LICENSE) for details.
+
+You may use this software for personal and educational purposes. Commercial use and redistribution are not permitted.
 
 ---
 
