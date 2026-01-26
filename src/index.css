@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-900: #1e3a5f;
+  --primary-700: #2563eb;
+  --primary-100: #dbeafe;
+  --urgent-red: #dc2626;
+  --warning-yellow: #f59e0b;
+  --success-green: #16a34a;
+  --neutral-white: #f8fafc;
+  --background: #ffffff;
+  --surface: #f8fafc;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background);
+  color: var(--text-primary);
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-700 text-white font-medium py-3 px-6 rounded-xl
+           hover:bg-primary-800 active:bg-primary-900
+           transition-colors duration-200
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-primary-700 font-medium py-3 px-6 rounded-xl
+           border-2 border-primary-200
+           hover:bg-primary-50 active:bg-primary-100
+           transition-colors duration-200
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6;
+  }
+
+  .input {
+    @apply w-full px-4 py-3 border border-gray-200 rounded-xl
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           placeholder:text-gray-400 transition-all duration-200;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+
+  .triage-urgent {
+    @apply bg-red-50 border-red-200 text-red-800;
+  }
+
+  .triage-warning {
+    @apply bg-amber-50 border-amber-200 text-amber-800;
+  }
+
+  .triage-minor {
+    @apply bg-green-50 border-green-200 text-green-800;
+  }
+
+  .triage-minimal {
+    @apply bg-gray-50 border-gray-200 text-gray-800;
+  }
+}
