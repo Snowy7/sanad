@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ClipboardPlus, Users, Activity, Shield } from 'lucide-react'
+import { ClipboardPlus, Users } from 'lucide-react'
 import { usePatientStore } from '../store/patientStore'
 
 export default function Home() {

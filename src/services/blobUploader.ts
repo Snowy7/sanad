@@ -77,8 +77,8 @@ class BlobUploader {
     }
 
     let blob: Blob | null = null
-    let filename: string
-    let fieldName: string
+    let filename = ''
+    let fieldName = ''
 
     switch (job.type) {
       case 'xray':
@@ -93,7 +93,7 @@ class BlobUploader {
         fieldName = 'voiceRecording'
         break
 
-      case 'heatmap':
+      case 'heatmap': {
         const heatmaps = await getHeatmapsForAssessment(job.assessmentId)
         const heatmap = heatmaps.find(h => h.id === job.localId)
         if (heatmap) {
@@ -102,9 +102,10 @@ class BlobUploader {
           fieldName = 'heatmapImages'
         }
         break
+      }
     }
 
-    if (!blob) {
+    if (!blob || !filename) {
       return {
         success: false,
         localId: job.localId,

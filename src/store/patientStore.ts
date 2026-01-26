@@ -4,10 +4,7 @@ import type {
   Assessment,
   VoiceNote,
   TriageScore,
-  SyncMetadata,
-  PersistedHeatmap,
 } from '../types'
-import { defaultSyncMetadata } from '../types'
 
 interface PatientState {
   assessments: Assessment[]

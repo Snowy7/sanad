@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { AlertTriangle, X, RefreshCw, Check } from 'lucide-react'
 
 interface ConflictBannerProps {
-  assessmentId: string
   localUpdatedAt: Date
   serverUpdatedAt: Date
   onKeepLocal: () => void
@@ -11,7 +10,6 @@ interface ConflictBannerProps {
 }
 
 export default function ConflictBanner({
-  assessmentId,
   localUpdatedAt,
   serverUpdatedAt,
   onKeepLocal,

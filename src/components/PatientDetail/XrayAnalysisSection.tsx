@@ -153,10 +153,6 @@ function getEffectiveConfidence(finding: XrayFinding): number {
 // Finding comparison card component
 function FindingComparisonCard({ finding }: { finding: XrayFinding }) {
   const effectiveConfidence = getEffectiveConfidence(finding)
-  const wasModified = finding.override && (
-    finding.override === 'disagree' ||
-    (finding.override === 'adjust' && finding.adjustedConfidence !== finding.confidence)
-  )
   const confidenceDiff = finding.adjustedConfidence !== undefined
     ? finding.adjustedConfidence - finding.confidence
     : 0
