@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build outputs (we build inside Docker)
+dist/
+
+# Development files
+.git/
+.gitignore
+*.md
+!README.md
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files (secrets)
+.env
+.env.local
+.env.*.local
+
+# PocketBase data (mounted as volumes)
+pb_data/
+pb_public/
+pb_migrations/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp

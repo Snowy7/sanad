@@ -1,0 +1,55 @@
+# Custom MIME types for SANAD PWA
+
+types {
+    # Web standard types
+    text/html                             html htm shtml;
+    text/css                              css;
+    text/xml                              xml;
+    text/plain                            txt;
+    text/javascript                       js mjs;
+    application/javascript                js;
+    application/json                      json;
+    application/xml                       xml;
+
+    # Fonts
+    font/woff                             woff;
+    font/woff2                            woff2;
+    application/font-woff                 woff;
+    application/font-woff2                woff2;
+    font/ttf                              ttf;
+    font/otf                              otf;
+    application/vnd.ms-fontobject         eot;
+
+    # Images
+    image/gif                             gif;
+    image/jpeg                            jpeg jpg;
+    image/png                             png;
+    image/svg+xml                         svg svgz;
+    image/webp                            webp;
+    image/x-icon                          ico;
+    image/avif                            avif;
+
+    # Audio/Video
+    audio/mpeg                            mp3;
+    audio/ogg                             ogg;
+    audio/webm                            weba;
+    video/mp4                             mp4;
+    video/webm                            webm;
+
+    # WebAssembly - Critical for ONNX Runtime
+    application/wasm                      wasm;
+
+    # ONNX Model files
+    application/octet-stream              onnx bin;
+
+    # PWA/Web App
+    application/manifest+json             webmanifest;
+    text/cache-manifest                   appcache;
+
+    # Archives
+    application/zip                       zip;
+    application/gzip                      gz;
+
+    # Documents
+    application/pdf                       pdf;
+}
