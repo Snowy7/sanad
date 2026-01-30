@@ -2,9 +2,16 @@
 
 <div align="center">
 
+![SANAD Logo](public/logo.png)
+
 **AI-Powered Medical Triage for Emergency Response**
 
-*Works Completely Offline | Cloud Sync | PWA Ready*
+*Offline-First | Dual AI Backends | Real-time Sync | PWA Ready*
+
+[![Live Demo](https://img.shields.io/badge/Demo-Live-brightgreen)](https://sanad-omega.vercel.app/)
+[![License](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-blue)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.3-61dafb)](https://reactjs.org/)
 
 </div>
 
@@ -12,46 +19,94 @@
 
 ## Overview
 
-SANAD (سند - "Support" in Arabic) is an offline-first Progressive Web Application designed to assist healthcare workers in disaster scenarios with rapid patient triage. It combines AI-powered chest X-ray analysis with CAM heatmaps, voice documentation, and evidence-based triage scoring to prioritize patients when resources are scarce.
+**SANAD** (سند - "Support" in Arabic) is an offline-first Progressive Web Application designed to assist healthcare workers in disaster scenarios with rapid patient triage. It combines dual AI-powered chest X-ray analysis (local ONNX + LM Studio VLM), imaging queue management, mobile unit tracking, and evidence-based triage scoring to prioritize patients when resources are scarce.
 
-### Key Features
+### Live Demo
 
-- **Chest X-Ray Analysis**: AI-powered pathology detection with Class Activation Map (CAM) heatmaps
-- **Medic Override System**: Confirm, adjust, or rule out AI findings with clinical judgment
-- **Voice Documentation**: Speech-to-text for hands-free note taking
-- **Smart Triage Scoring**: Evidence-based algorithm considering vitals, symptoms, and X-ray findings
-- **Offline-First**: All AI models run locally in the browser - no internet required
-- **Cloud Sync**: Optional PocketBase backend for multi-device synchronization
-- **Patient Queue**: Priority-sorted patient management with detailed views
-- **PWA Support**: Installable on any device like a native app
+**[https://sanad-omega.vercel.app/](https://sanad-omega.vercel.app/)**
 
 ---
 
-## [Demo](https://sanad-omega.vercel.app/)
+## Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Dual AI X-ray Analysis** | Local ONNX model (offline) + LM Studio VLM (advanced) |
+| **CAM Heatmaps** | Visual pathology localization on X-rays |
+| **Medic Override System** | Confirm, adjust, or rule out AI findings |
+| **Smart Triage Scoring** | Evidence-based algorithm with vitals, symptoms, X-ray |
+| **Imaging Queue** | Prioritize and manage imaging requests |
+| **Mobile Unit Tracking** | Manage portable X-ray/ultrasound equipment |
+| **AI Chat Assistant** | Context-aware medical assistant sidebar |
+| **Voice Documentation** | Speech-to-text for hands-free notes |
+| **Offline-First** | All core features work without internet |
+| **Real-time Sync** | Firebase cloud sync across devices |
+| **PWA Support** | Installable on any device |
+| **Guided Onboarding** | Interactive tutorial for new users |
+
+---
+
+## Screenshots
+
+<details>
+<summary>Click to view screenshots</summary>
+
+### Home Dashboard
+- Quick stats: total assessments, critical cases, pending imaging
+- Action cards for new assessment, patient queue, imaging queue
+
+### Assessment Workflow
+- Multi-step form with progress indicator
+- Patient info, vitals, symptoms, imaging decision, X-ray upload
+
+### X-ray Analysis
+- ONNX: 18 pathology detection with heatmaps
+- LM Studio: Detailed radiology reports with Q&A
+
+### Imaging Queue
+- Priority-sorted patient list
+- Mobile unit assignment
+- Status tracking (pending → in-progress → completed)
+
+### Patient Detail
+- Complete assessment view
+- X-ray findings with override history
+- Triage score breakdown
+
+</details>
+
+---
 
 ## Technology Stack
 
-| Component | Technology |
-|-----------|------------|
-| Frontend | React 18 + TypeScript + Vite |
-| Styling | Tailwind CSS |
-| State Management | Zustand + IndexedDB |
-| Backend (Optional) | PocketBase |
-| X-Ray AI Model | TorchXRayVision DenseNet → ONNX Runtime Web |
-| CAM Heatmaps | Class Activation Maps for pathology localization |
-| Speech-to-Text | Whisper via @huggingface/transformers |
-| PWA | vite-plugin-pwa |
-| Deployment | Docker + Nginx |
+| Category | Technology |
+|----------|------------|
+| **Frontend** | React 18.3 + TypeScript + Vite |
+| **Styling** | Tailwind CSS + Lucide React icons |
+| **State Management** | Zustand (with persistence) |
+| **Database** | Firebase Firestore + Cloud Storage |
+| **Local Storage** | IndexedDB (via `idb` library) |
+| **AI - Local** | ONNX Runtime Web (TorchXRayVision DenseNet) |
+| **AI - Advanced** | LM Studio (Vision Language Models) |
+| **Speech-to-Text** | Web Speech API / Whisper |
+| **PWA** | vite-plugin-pwa |
+| **Deployment** | Vercel / Docker + Nginx |
 
 ---
 
 ## Quick Start
 
+### Prerequisites
+
+- Node.js 18+
+- npm 9+
+- (Optional) LM Studio for advanced X-ray analysis
+
 ### Development
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/sanad.git
+git clone https://github.com/Snowy7/sanad.git
 cd sanad
 
 # Install dependencies
@@ -62,6 +117,13 @@ npm run dev
 ```
 
 The app will be available at `http://localhost:5173`
+
+### Production Build
+
+```bash
+npm run build
+npm run preview
+```
 
 ### Docker Deployment
 
@@ -76,308 +138,471 @@ docker-compose logs -f
 docker-compose down
 ```
 
-This starts:
-- **Frontend**: http://localhost:8080
-- **PocketBase Admin**: http://localhost:8090/_/
+---
 
-### Environment Configuration
+## Configuration
 
-Copy `.env.example` to `.env` and customize:
+### Environment Variables
+
+Create a `.env` file:
 
 ```env
-# Frontend port
-FRONTEND_PORT=8080
+# Firebase Configuration (required)
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
 
-# API URL for PocketBase
-VITE_API_URL=http://localhost:8090
+# LM Studio (optional - for advanced X-ray analysis)
+VITE_LMSTUDIO_URL=http://localhost:1234
+```
 
-# PocketBase port
-POCKETBASE_PORT=8090
+### LM Studio Setup (Optional)
 
-# CORS origins (comma-separated or * for all)
-ALLOWED_ORIGINS=*
+For advanced X-ray analysis with follow-up Q&A:
+
+1. Download [LM Studio](https://lmstudio.ai/)
+2. Load a vision-language model (recommended: `qwen3-vl-radiology-v1`)
+3. Start the local server (default port: 1234)
+4. Configure in SANAD Settings:
+   - Server URL: `http://localhost:1234`
+   - Model name: your loaded model
+   - Temperature: 0.1 (recommended for medical)
+
+### Model Files
+
+Required in `/public/models/`:
+
+```
+public/
+├── models/
+│   ├── chest_xray.onnx           # Base model (~27 MB)
+│   ├── chest_xray_cam.onnx       # CAM model (optional)
+│   └── classifier_weights.bin    # For heatmaps (~75 KB)
+└── wasm/
+    ├── ort-wasm.wasm
+    ├── ort-wasm-simd.wasm
+    └── ort-wasm-simd-threaded.wasm
 ```
 
 ---
 
 ## Architecture
 
-### Offline-First Design
-
-SANAD is built with an offline-first architecture:
+### System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Browser                              │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │   React UI  │  │   Zustand   │  │     IndexedDB       │  │
-│  │             │──│   Store     │──│  - Assessments      │  │
-│  │             │  │             │  │  - X-ray Images     │  │
-│  │             │  │             │  │  - Heatmaps         │  │
-│  │             │  │             │  │  - Voice Recordings │  │
-│  │             │  │             │  │  - Sync Queue       │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │                    Service Worker                       ││
-│  │  - App Shell Caching                                    ││
-│  │  - ONNX Model Caching                                   ││
-│  │  - Offline Fallback                                     ││
-│  └─────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-                           │ (when online)
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      PocketBase                              │
-│  - REST API                                                  │
-│  - SQLite Database                                           │
-│  - File Storage                                              │
-│  - Admin Dashboard                                           │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                         SANAD App                                │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│  │   React UI   │  │   Zustand    │  │     IndexedDB        │   │
+│  │   + Tailwind │──│   Stores     │──│  - X-ray Images      │   │
+│  │              │  │              │  │  - Heatmaps          │   │
+│  │              │  │              │  │  - Voice Recordings  │   │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────────┐  ┌────────────────────────────────┐   │
+│  │   ONNX Runtime Web   │  │        LM Studio API           │   │
+│  │   (Offline AI)       │  │   (Advanced AI - Optional)     │   │
+│  │   - 18 Pathologies   │  │   - Detailed Reports           │   │
+│  │   - CAM Heatmaps     │  │   - Follow-up Q&A              │   │
+│  └──────────────────────┘  └────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    Service Worker                         │   │
+│  │  - App Shell Caching  - Offline Support  - PWA Install   │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │ (when online)
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Firebase                                  │
+│  - Firestore (Real-time Database)                               │
+│  - Cloud Storage (Images, Heatmaps)                             │
+│  - Multi-device Sync                                            │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Sync Strategy
+### Data Flow
 
-1. **Offline Changes**: All operations are queued in IndexedDB
-2. **Coming Online**: Queue is processed, blobs uploaded, remote changes pulled
-3. **Conflict Resolution**: Last-write-wins with manual override option
+```
+User Input → Zustand Store → IndexedDB (local) → Firebase (cloud)
+                ↓
+         Triage Engine → Priority Calculation
+                ↓
+         Imaging Engine → Urgency Assessment
+                ↓
+         ONNX/LM Studio → X-ray Analysis
+```
 
 ---
 
 ## Features in Detail
 
-### X-Ray Analysis with CAM Heatmaps
+### 1. Patient Assessment Workflow
 
-The X-ray analysis now includes Class Activation Map (CAM) heatmaps that visualize where the AI model detected potential pathologies:
+Multi-step form with dynamic navigation:
 
-- **Original View**: Standard X-ray image
-- **Heatmap Overlays**: Toggle between different pathology heatmaps
-- **Color Scale**: Red/Orange = high suspicion, Blue/Green = low suspicion
+| Step | Description |
+|------|-------------|
+| **Patient Info** | Name, age, gender, chief complaint |
+| **Vitals** | BP, HR, RR, SpO2, temperature |
+| **Symptoms** | 18 categorized symptoms with severity |
+| **Imaging Decision** | AI-recommended urgency with override |
+| **X-ray Upload** | Optional AI analysis |
+| **Voice Notes** | Audio recording + text |
+| **Review** | Summary before submission |
 
-### Medic Override System
+### 2. Triage Scoring Algorithm
 
-Healthcare providers can override AI findings:
+Automatic priority calculation based on:
 
-| Override | Effect |
-|----------|--------|
-| **Agree** (✓) | Confirms AI finding |
-| **Disagree** (✗) | Rules out pathology (sets confidence to 0) |
-| **Adjust** (%) | Fine-tune confidence with slider |
+**Vital Signs (weighted):**
+- Oxygen Saturation: 20 points (most critical)
+- Blood Pressure: 15 points
+- Respiratory Rate: 15 points
+- Heart Rate: 12 points
+- Temperature: 8 points
 
-Overrides are tracked and displayed in patient detail view with:
-- Original AI confidence vs medic adjustment
-- Visual comparison bars
-- Override badges (Confirmed, Ruled Out, Adjusted)
+**Priority Levels:**
 
-### Patient Detail View
+| Priority | Score | Color | Action |
+|----------|-------|-------|--------|
+| Immediate | ≥70 | Red | Treat now |
+| Urgent | 45-69 | Orange | Treat soon |
+| Delayed | 20-44 | Green | Can wait |
+| Minimal | <20 | Gray | Minor care |
 
-Enhanced patient detail view includes:
-- Full X-ray with heatmap toggle
-- AI vs Medic finding comparison cards
-- Override history and notes
-- Sync status indicator
+### 3. Dual AI X-ray Analysis
 
-### Landing Page
+**ONNX Model (Default - Offline)**
+- Runs entirely in browser
+- 18 pathology detection
+- CAM heatmap visualization
+- ~2-5 second inference
 
-First-time visitors see an onboarding page with:
-- Feature highlights
-- PWA install prompt
-- Medical disclaimer
-- Quick start guide
+**LM Studio (Advanced - Optional)**
+- Requires local server
+- Structured radiology reports
+- Follow-up Q&A capability
+- Severity classification
+
+**Detected Pathologies:**
+```
+Atelectasis, Consolidation, Infiltration, Pneumothorax,
+Edema, Emphysema, Fibrosis, Effusion, Pneumonia,
+Pleural Thickening, Cardiomegaly, Nodule, Mass, Hernia,
+Lung Lesion, Fracture, Lung Opacity, Enlarged Cardiomediastinum
+```
+
+### 4. Medic Override System
+
+| Override | Effect | Badge |
+|----------|--------|-------|
+| **Agree** (✓) | Confirms AI finding | Confirmed |
+| **Disagree** (✗) | Rules out (confidence → 0) | Ruled Out |
+| **Adjust** (%) | Custom confidence level | Adjusted |
+
+### 5. Imaging Queue Management
+
+- Priority-sorted patient list
+- Filter by urgency, status, imaging type
+- Mobile unit assignment
+- Status tracking: `pending → in-progress → completed`
+
+**Urgency Levels:**
+
+| Urgency | Triage Score | Color |
+|---------|--------------|-------|
+| Critical | ≥70 | Red |
+| High | 45-69 | Orange |
+| Routine | 20-44 | Blue |
+| Not Required | <20 | Gray |
+
+### 6. Mobile Unit Management
+
+Track portable imaging equipment:
+
+- **Unit Types:** X-Ray Only, Ultrasound Only, Both
+- **Status:** Available, Assigned, Imaging, Offline
+- Add/edit/delete units
+- Assignment tracking
+
+### 7. AI Chat Assistant
+
+Context-aware sidebar:
+
+- Knows current page and patient
+- Quick suggestion buttons
+- Follow-up Q&A for X-ray analysis
+- Persistent chat history
+
+### 8. Onboarding Tutorial
+
+Interactive guided tour:
+
+1. Welcome introduction
+2. New Assessment button
+3. Patient Queue navigation
+4. Imaging Queue overview
+5. Navigation bar
+6. Settings access
+
+---
+
+## Offline Support
+
+### What Works Offline
+
+| Feature | Offline | Notes |
+|---------|---------|-------|
+| New Assessment | ✅ | Full workflow |
+| X-ray Analysis (ONNX) | ✅ | Local model |
+| X-ray Analysis (LM Studio) | ❌ | Requires server |
+| Patient Queue | ✅ | Local data |
+| Edit/Delete | ✅ | Syncs later |
+| Voice Recording | ✅ | Stored locally |
+| AI Chat | ❌ | Requires connection |
+
+### Sync Strategy
+
+1. All changes saved to IndexedDB immediately
+2. Firebase sync attempted when online
+3. Conflict detection via version tracking
+4. Offline indicator in UI
 
 ---
 
 ## Hardware Requirements
 
-### Minimum Requirements
+### Minimum
 
 | Component | Requirement |
 |-----------|-------------|
-| **CPU** | Any modern CPU (2015+) with SIMD support |
-| **RAM** | 4GB (8GB recommended) |
-| **Storage** | ~350MB for cached models |
-| **Browser** | Chrome 80+, Firefox 78+, Edge 80+, Safari 15+ |
-| **OS** | Windows, macOS, Linux, Android, iOS |
+| CPU | Modern CPU with SIMD (2015+) |
+| RAM | 4GB (8GB recommended) |
+| Storage | ~350MB for cached models |
+| Browser | Chrome 80+, Firefox 78+, Edge 80+ |
 
-### Resource Usage by Feature
+### Resource Usage
 
-| Feature | Memory | First Load | Inference Time |
-|---------|--------|------------|----------------|
-| **X-Ray Analysis** | ~200MB | ~27MB download | 2-5 seconds |
-| **CAM Heatmaps** | +50MB | Included | +1-2 seconds |
-| **Voice (Whisper)** | ~500MB | ~244MB download | 3-10 seconds |
-| **Basic UI/Triage** | ~50MB | ~2MB | Instant |
-
----
-
-## Model Setup
-
-### X-Ray Analysis Model with CAM
-
-The app uses a pre-trained DenseNet121 model with CAM support:
-
-```bash
-# Run conversion script
-python scripts/convert_xray_with_cam.py
-```
-
-This creates:
-- `public/models/chest_xray_cam.onnx` (~27 MB)
-- `public/models/classifier_weights.bin` (~75 KB)
-
-### WASM Files (for Offline Support)
-
-```bash
-mkdir -p public/wasm
-curl -o public/wasm/ort-wasm.wasm https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort-wasm.wasm
-curl -o public/wasm/ort-wasm-simd.wasm https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort-wasm-simd.wasm
-curl -o public/wasm/ort-wasm-simd-threaded.wasm https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort-wasm-simd-threaded.wasm
-```
+| Feature | Memory | Download | Time |
+|---------|--------|----------|------|
+| X-Ray Analysis | ~200MB | ~27MB | 2-5s |
+| CAM Heatmaps | +50MB | Included | +1-2s |
+| Voice (Whisper) | ~500MB | ~244MB | 3-10s |
+| Basic UI | ~50MB | ~2MB | Instant |
 
 ---
 
-## Usage Guide
+## Project Structure
 
-### 1. First Visit
-
-On first visit, you'll see the landing page with:
-- Feature overview
-- PWA install prompt (add to home screen)
-- Medical disclaimer
-
-Click "Get Started" to proceed.
-
-### 2. New Patient Assessment
-
-1. Click "New Assessment"
-2. Fill in patient information
-3. Record vital signs
-4. Select presenting symptoms
-5. (Optional) Upload a chest X-ray
-   - View AI analysis results
-   - Toggle heatmaps to see suspected areas
-   - Override findings if needed
-6. (Optional) Record voice notes
-7. Review and submit
-
-### 3. X-Ray Override Workflow
-
-When viewing X-ray analysis:
-1. Review AI confidence for each pathology
-2. Click ✓ to confirm, ✗ to rule out, or % to adjust
-3. Use the slider to fine-tune confidence if adjusting
-4. Add notes explaining your clinical reasoning
-5. Overall risk automatically recalculates
-
-### 4. Patient Detail View
-
-View complete assessment with:
-- X-ray with heatmap toggle buttons
-- Finding comparison cards showing AI vs Medic values
-- Override badges and history
-- Sync status indicator
-
-### 5. Cloud Sync (Optional)
-
-If PocketBase is configured:
-- Data syncs automatically when online
-- Sync status shown in header
-- Conflict resolution if same patient edited on multiple devices
+```
+sanad/
+├── public/
+│   ├── models/              # ONNX models
+│   └── wasm/                # ONNX runtime files
+├── src/
+│   ├── components/
+│   │   ├── Assessment/      # Form steps
+│   │   ├── Chat/            # AI chat UI
+│   │   ├── Imaging/         # Queue components
+│   │   ├── Layout/          # App layout
+│   │   ├── Onboarding/      # Tutorial
+│   │   └── ui/              # Design system
+│   ├── context/             # React contexts
+│   ├── hooks/               # Custom hooks
+│   ├── lib/
+│   │   ├── triageEngine.ts  # Triage algorithm
+│   │   ├── imagingUrgencyEngine.ts
+│   │   ├── firebase.ts      # Firebase config
+│   │   └── designTokens.ts  # Design constants
+│   ├── pages/               # Route pages
+│   ├── services/            # API services
+│   ├── store/               # Zustand stores
+│   ├── types/               # TypeScript types
+│   └── App.tsx
+├── DOCUMENTATION.md         # Detailed docs
+└── README.md
+```
 
 ---
 
-## Docker Deployment
+## API Reference
 
-### Production Deployment
+### Zustand Stores
 
-```bash
-# Copy and configure environment
-cp .env.example .env
-# Edit .env with production values
-
-# Build and deploy
-docker-compose up -d --build
+**Patient Store:**
+```typescript
+usePatientStore()
+  .assessments        // Assessment[]
+  .addAssessment()    // Create new
+  .updateAssessment() // Update existing
+  .deleteAssessment() // Remove
 ```
 
-### Nginx Configuration
+**Mobile Unit Store:**
+```typescript
+useMobileUnitStore()
+  .units              // MobileUnit[]
+  .addUnit()          // Create
+  .assignUnit()       // Assign to patient
+  .completeImaging()  // Mark done
+```
 
-The included Nginx config handles:
-- WASM files with proper MIME types and headers
-- ONNX model files
-- Cross-Origin headers for SharedArrayBuffer support
-- SPA routing fallback
-- API proxy to PocketBase
-- Gzip compression
-- Security headers
+**Settings Store:**
+```typescript
+useSettingsStore()
+  .xrayModel          // 'onnx' | 'lmstudio'
+  .lmStudioConfig     // Server config
+```
 
-### PocketBase Setup
+### Triage Engine
 
-1. Access PocketBase admin: http://localhost:8090/_/
-2. Create admin account
-3. Collections are auto-created on first sync
+```typescript
+import { calculateTriageScore } from './lib/triageEngine'
+
+const score = calculateTriageScore({
+  vitals: { ... },
+  symptoms: [ ... ],
+  xrayAnalysis: { ... }
+})
+// Returns: { priority, score, factors }
+```
+
+### Imaging Urgency Engine
+
+```typescript
+import { calculateImagingUrgency } from './lib/imagingUrgencyEngine'
+
+const urgency = calculateImagingUrgency(vitals, symptoms)
+// Returns: { urgency, type, region, indication }
+```
 
 ---
 
 ## Development
 
-### Available Scripts
+### Scripts
 
 ```bash
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run preview  # Preview production build
+npm run dev      # Development server
+npm run build    # Production build
+npm run preview  # Preview build
 npm run lint     # Run ESLint
 ```
 
-### Testing Sync
-
-1. Start with `docker-compose up`
-2. Create an assessment
-3. Check PocketBase admin for synced data
-4. Test offline by disabling network
-5. Make changes, re-enable network, verify sync
-
 ### Testing Offline
 
-1. Build app: `npm run build`
-2. Serve: `npm run preview`
-3. Load app in browser
-4. Open DevTools → Application → Service Workers
-5. Check "Offline"
-6. Verify app still works
+1. Build: `npm run build`
+2. Preview: `npm run preview`
+3. Open DevTools → Application → Service Workers
+4. Check "Offline"
+5. Verify app functionality
+
+### Adding New Symptoms
+
+Edit `src/types/index.ts`:
+
+```typescript
+export const SYMPTOMS_LIST: Symptom[] = [
+  // Add new symptom
+  {
+    id: 'new-symptom',
+    name: 'New Symptom',
+    category: 'category',
+    severity: 5
+  },
+  // ...
+]
+```
 
 ---
 
 ## Medical Disclaimer
 
-**SANAD is intended as a decision support tool only.**
+> **SANAD is a decision support tool only.**
+>
+> - Not a substitute for professional medical judgment
+> - AI predictions must be verified by qualified providers
+> - Triage scores are recommendations, not diagnoses
+> - Always prioritize clinical assessment
 
-- Not a substitute for professional medical judgment
-- AI predictions should be verified by qualified healthcare providers
-- Triage scores are recommendations, not diagnoses
-- Always prioritize clinical assessment over AI suggestions
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+Please follow existing code style and include tests where applicable.
+
+---
+
+## Resources
+
+### Documentation
+
+- [Full Documentation](DOCUMENTATION.md) - Comprehensive technical docs
+- [Design Tokens](src/lib/designTokens.ts) - Color and style constants
+- [Type Definitions](src/types/index.ts) - All TypeScript interfaces
+
+### External Resources
+
+- [TorchXRayVision](https://github.com/mlmed/torchxrayvision) - X-ray models
+- [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) - Browser inference
+- [LM Studio](https://lmstudio.ai/) - Local LLM server
+- [Firebase](https://firebase.google.com/) - Cloud backend
+- [Zustand](https://github.com/pmndrs/zustand) - State management
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [Lucide](https://lucide.dev/) - Icons
+- [Vite](https://vitejs.dev/) - Build tool
+
+### Research
+
+- [CheXNet Paper](https://arxiv.org/abs/1711.05225) - Deep learning for chest X-rays
+- [Class Activation Maps](https://arxiv.org/abs/1512.04150) - CAM visualization
 
 ---
 
 ## License
 
-This project is licensed under the **CC BY-NC-ND 4.0** (Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International) license. See [LICENSE](LICENSE) for details.
+This project is licensed under **CC BY-NC-ND 4.0** (Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International).
 
-You may use this software for personal and educational purposes. Commercial use and redistribution are not permitted.
+- ✅ Personal and educational use
+- ✅ Attribution required
+- ❌ Commercial use
+- ❌ Redistribution of modified versions
+
+See [LICENSE](LICENSE) for full details.
 
 ---
 
 ## Acknowledgments
 
 - [TorchXRayVision](https://github.com/mlmed/torchxrayvision) - X-ray analysis models
-- [PocketBase](https://pocketbase.io/) - Backend in a single file
-- [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) - Browser-based inference
-- [Hugging Face Transformers.js](https://github.com/xenova/transformers.js) - Speech-to-text
-- [Lucide](https://lucide.dev/) - Icons
+- [ONNX Runtime](https://github.com/microsoft/onnxruntime) - Browser-based inference
+- [Firebase](https://firebase.google.com/) - Real-time database and storage
+- [Hugging Face](https://huggingface.co/) - Transformers.js for speech
+- [Lucide](https://lucide.dev/) - Beautiful icons
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS
 
 ---
 
-## Contact
+## Contact & Support
 
-For questions, issues, or suggestions, please open a GitHub issue.
+- **Issues:** [GitHub Issues](https://github.com/Snowy7/sanad/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/Snowy7/sanad/discussions)
+
+---
+
+<div align="center">
+
+**Built with ❤️ for healthcare workers in challenging environments**
+
+</div>
