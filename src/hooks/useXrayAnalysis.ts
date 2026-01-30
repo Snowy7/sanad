@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import * as ort from 'onnxruntime-web'
-import { XrayInferenceResult } from '../types'
+import { XrayInferenceResult, VLMAnalysisResult, XrayAnalysisSource } from '../types'
+import { useSettingsStore, XrayModelType } from '../store/settingsStore'
+import { lmStudioService } from '../services/lmStudioService'
 
 // Configure ONNX Runtime Web
 // Use local WASM files for offline support
@@ -45,6 +47,14 @@ interface UseXrayAnalysisReturn {
   heatmaps: PathologyHeatmap[]
   selectedHeatmap: string | null
   setSelectedHeatmap: (name: string | null) => void
+  // LM Studio specific
+  currentModel: XrayModelType
+  isLMStudioAvailable: boolean
+  lmStudioConnectionStatus: 'unknown' | 'checking' | 'connected' | 'disconnected' | 'error'
+  vlmAnalysis: VLMAnalysisResult | null
+  vlmRawResponse: string | null
+  checkLMStudioConnection: () => Promise<boolean>
+  imageBase64: string | null
 }
 
 export function useXrayAnalysis(): UseXrayAnalysisReturn {
@@ -55,10 +65,26 @@ export function useXrayAnalysis(): UseXrayAnalysisReturn {
   const [isDemoMode, setIsDemoMode] = useState(true)
   const [heatmaps, setHeatmaps] = useState<PathologyHeatmap[]>([])
   const [selectedHeatmap, setSelectedHeatmap] = useState<string | null>(null)
+  const [vlmAnalysis, setVlmAnalysis] = useState<VLMAnalysisResult | null>(null)
+  const [vlmRawResponse, setVlmRawResponse] = useState<string | null>(null)
+  const [imageBase64, setImageBase64] = useState<string | null>(null)
 
   const sessionRef = useRef<ort.InferenceSession | null>(null)
   const classifierWeightsRef = useRef<Float32Array | null>(null)
   const hasCAMRef = useRef(false)
+
+  // Get settings from store
+  const {
+    xrayModel,
+    lmStudioConfig,
+    lmStudioConnectionStatus,
+    setLMStudioConnectionStatus,
+  } = useSettingsStore()
+
+  // Update LM Studio service config when settings change
+  useEffect(() => {
+    lmStudioService.setConfig(lmStudioConfig)
+  }, [lmStudioConfig])
 
   useEffect(() => {
     loadModel()
@@ -133,6 +159,40 @@ export function useXrayAnalysis(): UseXrayAnalysisReturn {
     } finally {
       setIsModelLoading(false)
     }
+  }
+
+  // Check LM Studio connection
+  const checkLMStudioConnection = useCallback(async (): Promise<boolean> => {
+    setLMStudioConnectionStatus('checking')
+
+    try {
+      const result = await lmStudioService.checkConnection()
+
+      if (result.connected) {
+        setLMStudioConnectionStatus('connected')
+        return true
+      } else {
+        setLMStudioConnectionStatus('disconnected', result.error)
+        return false
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Connection check failed'
+      setLMStudioConnectionStatus('error', message)
+      return false
+    }
+  }, [setLMStudioConnectionStatus])
+
+  // Convert file to base64 for VLM
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = reader.result as string
+        resolve(result)
+      }
+      reader.onerror = () => reject(new Error('Failed to read file'))
+      reader.readAsDataURL(file)
+    })
   }
 
   const preprocessImage = async (file: File): Promise<{ tensor: Float32Array; imageData: ImageData; image: HTMLImageElement }> => {
@@ -301,92 +361,161 @@ export function useXrayAnalysis(): UseXrayAnalysisReturn {
     return canvas.toDataURL('image/png')
   }
 
+  // Run ONNX analysis
+  const analyzeWithONNX = async (file: File): Promise<XrayInferenceResult | null> => {
+    const startTime = performance.now()
+    const { tensor, imageData, image } = await preprocessImage(file)
+
+    let probabilities: number[]
+    let featureMaps: Float32Array | null = null
+
+    if (sessionRef.current && !isDemoMode) {
+      console.log('Running inference with real model...')
+      console.log('Creating input tensor with shape [1, 1, 224, 224]')
+
+      const inputTensor = new ort.Tensor('float32', tensor, [1, 1, 224, 224])
+      console.log('Input tensor created:', inputTensor.dims, inputTensor.type)
+
+      const inputName = sessionRef.current.inputNames[0]
+      const feeds: Record<string, ort.Tensor> = { [inputName]: inputTensor }
+      console.log('Running model with input:', inputName)
+
+      let results
+      try {
+        results = await sessionRef.current.run(feeds)
+        console.log('Model inference completed')
+        console.log('Output names:', sessionRef.current.outputNames)
+      } catch (inferenceError) {
+        console.error('Inference failed:', inferenceError)
+        throw inferenceError
+      }
+
+      // Get probabilities output
+      const probsOutputName = sessionRef.current.outputNames[0]
+      const output = results[probsOutputName]
+      const rawOutput = Array.from(output.data as Float32Array)
+
+      console.log('Raw model output:', rawOutput.slice(0, 5), '...')
+
+      // Model outputs probabilities [0, 1] directly, just clamp for safety
+      probabilities = rawOutput.map(p => Math.max(0, Math.min(1, p)))
+      console.log('Probabilities:', probabilities.map(p => (p * 100).toFixed(1) + '%').slice(0, 5), '...')
+
+      // Get feature maps if CAM model
+      if (hasCAMRef.current && sessionRef.current.outputNames.length > 1) {
+        const featuresOutputName = sessionRef.current.outputNames[1]
+        const featuresOutput = results[featuresOutputName]
+        featureMaps = new Float32Array(featuresOutput.data as Float32Array)
+        console.log('Feature maps shape:', featuresOutput.dims)
+      }
+    } else {
+      console.log('Running in demo mode...')
+      probabilities = analyzeImagePropertiesForDemo(imageData)
+    }
+
+    // Generate heatmaps for top pathologies
+    if (featureMaps && classifierWeightsRef.current) {
+      const significantPathologies = probabilities
+        .map((prob, idx) => ({ prob, idx, name: PATHOLOGY_LABELS[idx] }))
+        .filter(p => p.prob > 0.05) // Generate heatmaps for >5% probability
+        .sort((a, b) => b.prob - a.prob)
+        .slice(0, 5) // Top 5 pathologies
+
+      console.log('Generating heatmaps for:', significantPathologies.map(p => p.name))
+
+      const generatedHeatmaps: PathologyHeatmap[] = significantPathologies.map(p => ({
+        name: p.name,
+        probability: p.prob,
+        heatmapDataUrl: generateCAMHeatmap(featureMaps!, classifierWeightsRef.current!, p.idx, image)
+      }))
+
+      setHeatmaps(generatedHeatmaps)
+    }
+
+    const processingTime = performance.now() - startTime
+
+    return {
+      pathologies: PATHOLOGY_LABELS.map((name, i) => ({
+        name,
+        probability: probabilities[i] || 0,
+      })),
+      processingTime,
+      source: 'onnx' as XrayAnalysisSource,
+    }
+  }
+
+  // Run LM Studio VLM analysis
+  const analyzeWithLMStudio = async (file: File, base64Image: string): Promise<XrayInferenceResult | null> => {
+    const startTime = performance.now()
+
+    console.log('Running analysis with LM Studio VLM...')
+
+    // Check connection if unknown
+    if (lmStudioConnectionStatus === 'unknown') {
+      const connected = await checkLMStudioConnection()
+      if (!connected) {
+        throw new Error('LM Studio server is not available')
+      }
+    } else if (lmStudioConnectionStatus !== 'connected') {
+      throw new Error('LM Studio server is not connected')
+    }
+
+    const { result, rawResponse } = await lmStudioService.analyzeXray(base64Image)
+
+    setVlmAnalysis(result)
+    setVlmRawResponse(rawResponse)
+
+    const processingTime = performance.now() - startTime
+
+    // Map VLM severity to risk level for compatibility
+    const severityToRisk: Record<string, number> = {
+      normal: 0.1,
+      mild: 0.25,
+      moderate: 0.5,
+      severe: 0.75,
+      critical: 0.95,
+    }
+
+    // Create minimal pathology data (VLM doesn't provide individual probabilities)
+    return {
+      pathologies: PATHOLOGY_LABELS.map((name) => ({
+        name,
+        probability: 0, // VLM doesn't provide individual pathology probabilities
+      })),
+      processingTime,
+      source: 'lmstudio' as XrayAnalysisSource,
+      vlmResult: result,
+    }
+  }
+
   const analyze = useCallback(
     async (file: File): Promise<XrayInferenceResult | null> => {
       setIsLoading(true)
       setError(null)
       setHeatmaps([])
       setSelectedHeatmap(null)
-
-      const startTime = performance.now()
+      setVlmAnalysis(null)
+      setVlmRawResponse(null)
 
       try {
-        const { tensor, imageData, image } = await preprocessImage(file)
+        // Convert to base64 for VLM and store for chat
+        const base64Image = await fileToBase64(file)
+        setImageBase64(base64Image)
 
-        let probabilities: number[]
-        let featureMaps: Float32Array | null = null
+        // Determine which backend to use
+        const useVLM = xrayModel === 'lmstudio' && lmStudioConnectionStatus === 'connected'
 
-        if (sessionRef.current && !isDemoMode) {
-          console.log('Running inference with real model...')
-          console.log('Creating input tensor with shape [1, 1, 224, 224]')
-
-          const inputTensor = new ort.Tensor('float32', tensor, [1, 1, 224, 224])
-          console.log('Input tensor created:', inputTensor.dims, inputTensor.type)
-
-          const inputName = sessionRef.current.inputNames[0]
-          const feeds: Record<string, ort.Tensor> = { [inputName]: inputTensor }
-          console.log('Running model with input:', inputName)
-
-          let results
+        if (useVLM) {
           try {
-            results = await sessionRef.current.run(feeds)
-            console.log('Model inference completed')
-            console.log('Output names:', sessionRef.current.outputNames)
-          } catch (inferenceError) {
-            console.error('Inference failed:', inferenceError)
-            throw inferenceError
-          }
-
-          // Get probabilities output
-          const probsOutputName = sessionRef.current.outputNames[0]
-          const output = results[probsOutputName]
-          const rawOutput = Array.from(output.data as Float32Array)
-
-          console.log('Raw model output:', rawOutput.slice(0, 5), '...')
-
-          // Model outputs probabilities [0, 1] directly, just clamp for safety
-          probabilities = rawOutput.map(p => Math.max(0, Math.min(1, p)))
-          console.log('Probabilities:', probabilities.map(p => (p * 100).toFixed(1) + '%').slice(0, 5), '...')
-
-          // Get feature maps if CAM model
-          if (hasCAMRef.current && sessionRef.current.outputNames.length > 1) {
-            const featuresOutputName = sessionRef.current.outputNames[1]
-            const featuresOutput = results[featuresOutputName]
-            featureMaps = new Float32Array(featuresOutput.data as Float32Array)
-            console.log('Feature maps shape:', featuresOutput.dims)
+            return await analyzeWithLMStudio(file, base64Image)
+          } catch (vlmError) {
+            console.warn('VLM analysis failed, falling back to ONNX:', vlmError)
+            setError(`LM Studio failed: ${vlmError instanceof Error ? vlmError.message : 'Unknown error'}. Using ONNX fallback.`)
+            // Fallback to ONNX
+            return await analyzeWithONNX(file)
           }
         } else {
-          console.log('Running in demo mode...')
-          probabilities = analyzeImagePropertiesForDemo(imageData)
-        }
-
-        // Generate heatmaps for top pathologies
-        if (featureMaps && classifierWeightsRef.current) {
-          const significantPathologies = probabilities
-            .map((prob, idx) => ({ prob, idx, name: PATHOLOGY_LABELS[idx] }))
-            .filter(p => p.prob > 0.05) // Generate heatmaps for >5% probability
-            .sort((a, b) => b.prob - a.prob)
-            .slice(0, 5) // Top 5 pathologies
-
-          console.log('Generating heatmaps for:', significantPathologies.map(p => p.name))
-
-          const generatedHeatmaps: PathologyHeatmap[] = significantPathologies.map(p => ({
-            name: p.name,
-            probability: p.prob,
-            heatmapDataUrl: generateCAMHeatmap(featureMaps!, classifierWeightsRef.current!, p.idx, image)
-          }))
-
-          setHeatmaps(generatedHeatmaps)
-        }
-
-        const processingTime = performance.now() - startTime
-
-        return {
-          pathologies: PATHOLOGY_LABELS.map((name, i) => ({
-            name,
-            probability: probabilities[i] || 0,
-          })),
-          processingTime,
+          return await analyzeWithONNX(file)
         }
       } catch (e) {
         console.error('X-ray analysis error:', e)
@@ -402,7 +531,7 @@ export function useXrayAnalysis(): UseXrayAnalysisReturn {
         setIsLoading(false)
       }
     },
-    [isDemoMode]
+    [isDemoMode, xrayModel, lmStudioConnectionStatus, checkLMStudioConnection]
   )
 
   // Demo mode analysis
@@ -473,6 +602,8 @@ export function useXrayAnalysis(): UseXrayAnalysisReturn {
     return probs.map(p => Math.min(0.92, Math.max(0.02, p)))
   }
 
+  const isLMStudioAvailable = lmStudioConnectionStatus === 'connected'
+
   return {
     analyze,
     isLoading,
@@ -483,5 +614,13 @@ export function useXrayAnalysis(): UseXrayAnalysisReturn {
     heatmaps,
     selectedHeatmap,
     setSelectedHeatmap,
+    // LM Studio specific
+    currentModel: xrayModel,
+    isLMStudioAvailable,
+    lmStudioConnectionStatus,
+    vlmAnalysis,
+    vlmRawResponse,
+    checkLMStudioConnection,
+    imageBase64,
   }
 }

@@ -1,16 +1,17 @@
 import { NavLink } from 'react-router-dom'
-import { Home, ClipboardPlus, Users } from 'lucide-react'
+import { Home, ClipboardPlus, Users, Settings } from 'lucide-react'
 
 const navItems = [
   { to: '/', icon: Home, label: 'Home' },
   { to: '/assessment', icon: ClipboardPlus, label: 'New Assessment' },
   { to: '/queue', icon: Users, label: 'Patient Queue' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
 export default function Navigation() {
   return (
-    <nav className="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50">
-      <div className="container mx-auto max-w-4xl">
+    <nav className="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50 shadow-lg">
+      <div className="container mx-auto max-w-4xl lg:max-w-6xl xl:max-w-7xl">
         <div className="flex justify-around">
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
@@ -19,7 +20,7 @@ export default function Navigation() {
               className={({ isActive }) =>
                 `flex flex-col items-center py-3 px-6 transition-colors ${
                   isActive
-                    ? 'text-primary-700'
+                    ? 'text-primary-600'
                     : 'text-gray-500 hover:text-gray-700'
                 }`
               }

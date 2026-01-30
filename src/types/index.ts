@@ -1,5 +1,25 @@
 // Patient and Assessment Types
 
+// X-ray analysis source types
+export type XrayAnalysisSource = 'onnx' | 'lmstudio'
+
+// Chat message type for AI conversations
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  timestamp: Date
+}
+
+// VLM analysis result from LM Studio
+export interface VLMAnalysisResult {
+  technique?: string
+  findings: string
+  impressions: string[]
+  recommendations: string[]
+  severity: 'normal' | 'mild' | 'moderate' | 'severe' | 'critical'
+}
+
 // Sync types for offline-first architecture
 export type SyncStatus = 'pending' | 'syncing' | 'synced' | 'conflict' | 'error';
 
@@ -71,6 +91,10 @@ export interface XrayAnalysis {
   imageId?: string;  // IndexedDB reference for the original image
   heatmaps?: PersistedHeatmap[];  // Persisted heatmaps for patient detail view
   analyzedAt: Date;
+  // LM Studio specific fields
+  source?: XrayAnalysisSource;
+  vlmAnalysis?: VLMAnalysisResult;
+  chatHistory?: ChatMessage[];
 }
 
 export interface VoiceNote {
@@ -138,6 +162,8 @@ export interface XrayInferenceResult {
     probability: number;
   }[];
   processingTime: number;
+  source?: XrayAnalysisSource;
+  vlmResult?: VLMAnalysisResult;
 }
 
 export interface WhisperTranscriptionResult {

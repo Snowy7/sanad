@@ -1,8 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { ImageIcon, Upload, X, Loader2, AlertCircle, FlaskConical, Flame, Check, XCircle, SlidersHorizontal } from 'lucide-react'
-import { XrayAnalysis, XrayFinding, FindingOverride, PersistedHeatmap } from '../../types'
+import { ImageIcon, Upload, X, Loader2, AlertCircle, FlaskConical, Flame, Check, XCircle, SlidersHorizontal, Wifi, WifiOff, Sparkles, Cpu } from 'lucide-react'
+import { XrayAnalysis, XrayFinding, FindingOverride, PersistedHeatmap, ChatMessage } from '../../types'
 import { useXrayAnalysis, PathologyHeatmap } from '../../hooks/useXrayAnalysis'
 import { saveHeatmap, saveXrayImage } from '../../store/patientStore'
+import { useSettingsStore } from '../../store/settingsStore'
+import XrayAIChat from './XrayAIChat'
 
 // Helper to convert data URL to Blob
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
@@ -54,6 +56,7 @@ export default function XrayUpload({
     analysis?.imageUrl || null
   )
   const [isDragging, setIsDragging] = useState(false)
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>(analysis?.chatHistory || [])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const {
@@ -65,8 +68,17 @@ export default function XrayUpload({
     isDemoMode,
     heatmaps,
     selectedHeatmap,
-    setSelectedHeatmap
+    setSelectedHeatmap,
+    currentModel,
+    isLMStudioAvailable,
+    lmStudioConnectionStatus,
+    vlmAnalysis,
+    vlmRawResponse,
+    checkLMStudioConnection,
+    imageBase64,
   } = useXrayAnalysis()
+
+  const { xrayModel, setXrayModel } = useSettingsStore()
 
   // Track the current temp ID for heatmap persistence
   const tempAssessmentIdRef = useRef<string | null>(null)
@@ -118,6 +130,7 @@ export default function XrayUpload({
       const url = URL.createObjectURL(file)
       setPreview(url)
       onImageChange(file)
+      setChatHistory([]) // Reset chat history for new image
 
       const result = await analyze(file)
       if (result) {
@@ -128,32 +141,53 @@ export default function XrayUpload({
         // Save original X-ray image to IndexedDB
         const imageId = await saveXrayImage(tempId, file)
 
-        // If CAM model generated heatmaps, wait for useEffect to persist them
-        // Otherwise complete immediately (demo mode or no CAM model)
-        if (heatmaps.length === 0) {
-          // No heatmaps expected, or demo mode - wait a bit and check again
-          setTimeout(async () => {
-            if (heatmaps.length > 0) {
-              // Heatmaps arrived, let useEffect handle it
-              pendingAnalysisRef.current = { imageId, imageUrl: url, result }
-            } else {
-              // No heatmaps, complete immediately
-              onAnalysisComplete({
-                findings: result.pathologies.map((p) => ({
-                  pathology: p.name,
-                  confidence: p.probability,
-                  description: getPathologyDescription(p.name),
-                })),
-                overallRisk: getOverallRisk(result.pathologies),
-                imageUrl: url,
-                imageId,
-                analyzedAt: new Date(),
-              })
-            }
-          }, 100)
+        // Check if this is a VLM result
+        if (result.source === 'lmstudio' && result.vlmResult) {
+          // VLM analysis - complete immediately with VLM-specific data
+          const vlmRisk = mapVLMSeverityToRisk(result.vlmResult.severity)
+          onAnalysisComplete({
+            findings: result.pathologies.map((p) => ({
+              pathology: p.name,
+              confidence: p.probability,
+              description: getPathologyDescription(p.name),
+            })),
+            overallRisk: vlmRisk,
+            imageUrl: url,
+            imageId,
+            analyzedAt: new Date(),
+            source: 'lmstudio',
+            vlmAnalysis: result.vlmResult,
+          })
         } else {
-          // Heatmaps already available, let useEffect handle it
-          pendingAnalysisRef.current = { imageId, imageUrl: url, result }
+          // ONNX analysis - handle heatmaps
+          // If CAM model generated heatmaps, wait for useEffect to persist them
+          // Otherwise complete immediately (demo mode or no CAM model)
+          if (heatmaps.length === 0) {
+            // No heatmaps expected, or demo mode - wait a bit and check again
+            setTimeout(async () => {
+              if (heatmaps.length > 0) {
+                // Heatmaps arrived, let useEffect handle it
+                pendingAnalysisRef.current = { imageId, imageUrl: url, result }
+              } else {
+                // No heatmaps, complete immediately
+                onAnalysisComplete({
+                  findings: result.pathologies.map((p) => ({
+                    pathology: p.name,
+                    confidence: p.probability,
+                    description: getPathologyDescription(p.name),
+                  })),
+                  overallRisk: getOverallRisk(result.pathologies),
+                  imageUrl: url,
+                  imageId,
+                  analyzedAt: new Date(),
+                  source: 'onnx',
+                })
+              }
+            }, 100)
+          } else {
+            // Heatmaps already available, let useEffect handle it
+            pendingAnalysisRef.current = { imageId, imageUrl: url, result }
+          }
         }
       }
     },
@@ -186,8 +220,20 @@ export default function XrayUpload({
     setPreview(null)
     onImageChange(null)
     onAnalysisComplete(null)
+    setChatHistory([])
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
+
+  // Handle chat updates - persist to analysis
+  const handleChatUpdate = useCallback((messages: ChatMessage[]) => {
+    setChatHistory(messages)
+    if (analysis) {
+      onAnalysisComplete({
+        ...analysis,
+        chatHistory: messages,
+      })
+    }
+  }, [analysis, onAnalysisComplete])
 
   // Handle medic override of AI findings
   const handleOverride = (findingIndex: number, override: FindingOverride) => {
@@ -250,7 +296,7 @@ export default function XrayUpload({
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <div className="bg-primary-100 p-3 rounded-xl">
-          <ImageIcon className="w-6 h-6 text-primary-700" />
+          <ImageIcon className="w-6 h-6 text-primary-600" />
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900">X-Ray Analysis</h2>
@@ -260,21 +306,88 @@ export default function XrayUpload({
         </div>
       </div>
 
+      {/* Model Selector */}
+      <div className="card bg-gray-50 border-gray-200 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-medium text-gray-700">Analysis Model</h4>
+          {xrayModel === 'lmstudio' && (
+            <button
+              onClick={() => checkLMStudioConnection()}
+              className="text-xs text-primary-600 hover:text-primary-700 flex items-center gap-1"
+              disabled={lmStudioConnectionStatus === 'checking'}
+            >
+              {lmStudioConnectionStatus === 'checking' ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : lmStudioConnectionStatus === 'connected' ? (
+                <Wifi className="w-3 h-3 text-green-500" />
+              ) : (
+                <WifiOff className="w-3 h-3 text-red-500" />
+              )}
+              {lmStudioConnectionStatus === 'checking' ? 'Checking...' :
+               lmStudioConnectionStatus === 'connected' ? 'Connected' : 'Check Connection'}
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setXrayModel('onnx')}
+            className={`flex-1 p-3 rounded-lg border-2 transition-all ${
+              xrayModel === 'onnx'
+                ? 'border-primary-500 bg-primary-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Cpu className="w-4 h-4 text-primary-600" />
+              <span className="font-medium text-gray-800">Chest X-ray Model</span>
+            </div>
+            <p className="text-xs text-gray-500 text-left">
+              Fast local inference, 18 pathologies, CAM heatmaps, works offline
+            </p>
+          </button>
+          <button
+            onClick={() => setXrayModel('lmstudio')}
+            className={`flex-1 p-3 rounded-lg border-2 transition-all ${
+              xrayModel === 'lmstudio'
+                ? 'border-primary-500 bg-primary-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              <span className="font-medium text-gray-800">Advanced Radiology AI</span>
+              {lmStudioConnectionStatus === 'connected' && (
+                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Online</span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 text-left">
+              Detailed text analysis, clinical recommendations, interactive Q&A
+            </p>
+          </button>
+        </div>
+        {xrayModel === 'lmstudio' && lmStudioConnectionStatus !== 'connected' && (
+          <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            LM Studio server required. Configure in Settings if not connected.
+          </p>
+        )}
+      </div>
+
       {/* Model Loading State */}
       {isModelLoading && (
         <div className="card bg-blue-50 border-blue-200">
           <div className="flex items-center gap-3">
             <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
             <div className="flex-1">
-              <p className="font-medium text-blue-800">Loading X-ray model...</p>
+              <p className="font-medium text-blue-700">Loading X-ray model...</p>
               <p className="text-sm text-blue-600">
                 {modelLoadingProgress}% - This only happens once
               </p>
             </div>
           </div>
-          <div className="mt-2 h-2 bg-blue-200 rounded-full overflow-hidden">
+          <div className="mt-2 h-2 bg-blue-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-600 transition-all"
+              className="h-full bg-blue-500 transition-all"
               style={{ width: `${modelLoadingProgress}%` }}
             />
           </div>
@@ -330,7 +443,7 @@ export default function XrayUpload({
             <img
               src={displayImage || preview}
               alt="X-ray preview"
-              className="w-full bg-gray-900 object-contain max-h-80"
+              className="w-full bg-slate-900 object-contain max-h-80"
             />
 
             {/* Heatmap indicator */}
@@ -346,10 +459,10 @@ export default function XrayUpload({
           {heatmaps.length > 0 && (
             <div className="card bg-orange-50 border-orange-200">
               <div className="flex items-center gap-2 mb-3">
-                <Flame className="w-5 h-5 text-orange-600" />
-                <h4 className="font-semibold text-orange-900">Suspect Area Heatmaps</h4>
+                <Flame className="w-5 h-5 text-orange-500" />
+                <h4 className="font-semibold text-orange-700">Suspect Area Heatmaps</h4>
               </div>
-              <p className="text-sm text-orange-700 mb-3">
+              <p className="text-sm text-orange-600 mb-3">
                 Click a pathology to see where the AI suspects it may be located:
               </p>
               <div className="flex flex-wrap gap-2">
@@ -357,8 +470,8 @@ export default function XrayUpload({
                   onClick={() => setSelectedHeatmap(null)}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     !selectedHeatmap
-                      ? 'bg-gray-800 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                      ? 'bg-gray-200 text-gray-800'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                 >
                   Original
@@ -369,15 +482,15 @@ export default function XrayUpload({
                     onClick={() => setSelectedHeatmap(heatmap.name)}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                       selectedHeatmap === heatmap.name
-                        ? 'bg-orange-600 text-white'
-                        : 'bg-white text-orange-700 hover:bg-orange-100 border border-orange-300'
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-white text-orange-600 hover:bg-orange-100 border border-orange-200'
                     }`}
                   >
                     {heatmap.name} ({Math.round(heatmap.probability * 100)}%)
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-orange-600 mt-3">
+              <p className="text-xs text-orange-500 mt-3">
                 Red/orange areas = higher suspicion. Blue/green = lower suspicion.
               </p>
             </div>
@@ -405,14 +518,20 @@ export default function XrayUpload({
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-gray-900">AI Analysis Results</h3>
                 <div className="flex items-center gap-2">
-                  {heatmaps.length > 0 && (
-                    <span className="flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                  {analysis.source === 'lmstudio' && (
+                    <span className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-600 text-xs font-medium rounded-full">
+                      <Sparkles className="w-3 h-3" />
+                      Advanced AI
+                    </span>
+                  )}
+                  {heatmaps.length > 0 && analysis.source !== 'lmstudio' && (
+                    <span className="flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-600 text-xs font-medium rounded-full">
                       <Flame className="w-3 h-3" />
                       Heatmaps Available
                     </span>
                   )}
-                  {isDemoMode && (
-                    <span className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                  {isDemoMode && analysis.source !== 'lmstudio' && (
+                    <span className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-600 text-xs font-medium rounded-full">
                       <FlaskConical className="w-3 h-3" />
                       Demo Mode
                     </span>
@@ -424,123 +543,177 @@ export default function XrayUpload({
               <div
                 className={`mb-4 p-3 rounded-lg ${
                   analysis.overallRisk === 'critical'
-                    ? 'bg-red-100 text-red-800'
+                    ? 'bg-red-50 text-red-700'
                     : analysis.overallRisk === 'high'
-                    ? 'bg-orange-100 text-orange-800'
+                    ? 'bg-orange-50 text-orange-700'
                     : analysis.overallRisk === 'moderate'
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-green-100 text-green-800'
+                    ? 'bg-amber-50 text-amber-700'
+                    : 'bg-green-50 text-green-700'
                 }`}
               >
                 <span className="font-medium">Overall Risk: </span>
                 <span className="capitalize">{analysis.overallRisk}</span>
+                {analysis.vlmAnalysis?.severity && (
+                  <span className="text-xs ml-2">
+                    (Severity: {analysis.vlmAnalysis.severity})
+                  </span>
+                )}
               </div>
 
-              {/* Findings - show all pathologies sorted by confidence with override controls */}
-              <div className="space-y-3">
-                {analysis.findings
-                  .sort((a, b) => b.confidence - a.confidence)
-                  .map((finding, index) => {
-                    const hasHeatmap = heatmaps.some(h => h.name === finding.pathology)
-                    const effectiveConfidence = finding.override === 'disagree'
-                      ? 0
-                      : finding.adjustedConfidence ?? finding.confidence
+              {/* VLM Analysis Display */}
+              {analysis.source === 'lmstudio' && analysis.vlmAnalysis && (
+                <div className="space-y-4">
+                  {/* Technique */}
+                  {analysis.vlmAnalysis.technique && (
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700 mb-1">Technique</h4>
+                      <p className="text-sm text-gray-600">{analysis.vlmAnalysis.technique}</p>
+                    </div>
+                  )}
 
-                    return (
-                      <div
-                        key={index}
-                        className={`p-3 rounded-lg border ${
-                          finding.override === 'agree' ? 'border-green-300 bg-green-50' :
-                          finding.override === 'disagree' ? 'border-red-300 bg-red-50' :
-                          finding.override === 'adjust' ? 'border-blue-300 bg-blue-50' :
-                          'border-gray-200 bg-white'
-                        }`}
-                      >
-                        {/* Finding Header */}
-                        <div className="flex items-center justify-between mb-2">
-                          <div
-                            className={`font-medium text-gray-700 flex items-center gap-2 ${hasHeatmap ? 'cursor-pointer hover:text-primary-600' : ''}`}
-                            onClick={() => hasHeatmap && setSelectedHeatmap(finding.pathology)}
-                          >
-                            {finding.pathology}
-                            {hasHeatmap && (
-                              <Flame className="w-3 h-3 text-orange-500" />
-                            )}
-                            {finding.override && (
-                              <span className={`text-xs px-1.5 py-0.5 rounded ${
-                                finding.override === 'agree' ? 'bg-green-200 text-green-800' :
-                                finding.override === 'disagree' ? 'bg-red-200 text-red-800' :
-                                'bg-blue-200 text-blue-800'
-                              }`}>
-                                {finding.override === 'agree' ? 'Confirmed' :
-                                 finding.override === 'disagree' ? 'Ruled Out' : 'Adjusted'}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`text-sm font-medium ${
-                                effectiveConfidence > 0.7
-                                  ? 'text-red-600'
-                                  : effectiveConfidence > 0.4
-                                  ? 'text-amber-600'
-                                  : 'text-gray-500'
-                              }`}
+                  {/* Findings */}
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">Findings</h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{analysis.vlmAnalysis.findings}</p>
+                  </div>
+
+                  {/* Impressions */}
+                  {analysis.vlmAnalysis.impressions.length > 0 && (
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <h4 className="text-sm font-medium text-blue-700 mb-2">Impressions</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        {analysis.vlmAnalysis.impressions.map((impression, i) => (
+                          <li key={i} className="text-sm text-blue-600">{impression}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Recommendations */}
+                  {analysis.vlmAnalysis.recommendations.length > 0 && (
+                    <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      <h4 className="text-sm font-medium text-amber-700 mb-2">Recommendations</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        {analysis.vlmAnalysis.recommendations.map((rec, i) => (
+                          <li key={i} className="text-sm text-amber-600">{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Heatmaps not available with Advanced AI model.
+                  </p>
+                </div>
+              )}
+
+              {/* ONNX Findings - show all pathologies sorted by confidence with override controls */}
+              {analysis.source !== 'lmstudio' && (
+                <div className="space-y-3">
+                  {analysis.findings
+                    .sort((a, b) => b.confidence - a.confidence)
+                    .map((finding, index) => {
+                      const hasHeatmap = heatmaps.some(h => h.name === finding.pathology)
+                      const effectiveConfidence = finding.override === 'disagree'
+                        ? 0
+                        : finding.adjustedConfidence ?? finding.confidence
+
+                      return (
+                        <div
+                          key={index}
+                          className={`p-3 rounded-lg border ${
+                            finding.override === 'agree' ? 'border-green-200 bg-green-50' :
+                            finding.override === 'disagree' ? 'border-red-200 bg-red-50' :
+                            finding.override === 'adjust' ? 'border-blue-200 bg-blue-50' :
+                            'border-gray-200 bg-gray-50'
+                          }`}
+                        >
+                          {/* Finding Header */}
+                          <div className="flex items-center justify-between mb-2">
+                            <div
+                              className={`font-medium text-gray-800 flex items-center gap-2 ${hasHeatmap ? 'cursor-pointer hover:text-primary-600' : ''}`}
+                              onClick={() => hasHeatmap && setSelectedHeatmap(finding.pathology)}
                             >
-                              {finding.override === 'adjust' && finding.adjustedConfidence !== undefined && (
-                                <span className="text-gray-400 line-through mr-1">
-                                  {Math.round(finding.confidence * 100)}%
+                              {finding.pathology}
+                              {hasHeatmap && (
+                                <Flame className="w-3 h-3 text-orange-500" />
+                              )}
+                              {finding.override && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                  finding.override === 'agree' ? 'bg-green-100 text-green-700' :
+                                  finding.override === 'disagree' ? 'bg-red-100 text-red-700' :
+                                  'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {finding.override === 'agree' ? 'Confirmed' :
+                                   finding.override === 'disagree' ? 'Ruled Out' : 'Adjusted'}
                                 </span>
                               )}
-                              {Math.round(effectiveConfidence * 100)}%
-                            </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`text-sm font-medium ${
+                                  effectiveConfidence > 0.7
+                                    ? 'text-red-600'
+                                    : effectiveConfidence > 0.4
+                                    ? 'text-amber-600'
+                                    : 'text-gray-500'
+                                }`}
+                              >
+                                {finding.override === 'adjust' && finding.adjustedConfidence !== undefined && (
+                                  <span className="text-gray-400 line-through mr-1">
+                                    {Math.round(finding.confidence * 100)}%
+                                  </span>
+                                )}
+                                {Math.round(effectiveConfidence * 100)}%
+                              </span>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Confidence Bar */}
-                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
-                          <div
-                            className={`h-full transition-all ${
-                              finding.override === 'disagree' ? 'bg-gray-300' :
-                              effectiveConfidence > 0.7 ? 'bg-red-500' :
-                              effectiveConfidence > 0.4 ? 'bg-amber-500' :
-                              'bg-gray-400'
-                            }`}
-                            style={{ width: `${Math.round(effectiveConfidence * 100)}%` }}
-                          />
-                        </div>
+                          {/* Confidence Bar */}
+                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
+                            <div
+                              className={`h-full transition-all ${
+                                finding.override === 'disagree' ? 'bg-gray-400' :
+                                effectiveConfidence > 0.7 ? 'bg-red-500' :
+                                effectiveConfidence > 0.4 ? 'bg-amber-500' :
+                                'bg-gray-400'
+                              }`}
+                              style={{ width: `${Math.round(effectiveConfidence * 100)}%` }}
+                            />
+                          </div>
 
-                        {/* Override Controls */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500 mr-1">Override:</span>
-                          <button
-                            onClick={() => handleOverride(index, 'agree')}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              finding.override === 'agree'
-                                ? 'bg-green-500 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-600'
-                            }`}
-                            title="Agree with AI finding"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleOverride(index, 'disagree')}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              finding.override === 'disagree'
-                                ? 'bg-red-500 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600'
-                            }`}
-                            title="Disagree / Rule out"
-                          >
-                            <XCircle className="w-4 h-4" />
+                          {/* Override Controls */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 mr-1">Override:</span>
+                            <button
+                              onClick={() => handleOverride(index, 'agree')}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                finding.override === 'agree'
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-gray-200 text-gray-500 hover:bg-green-100 hover:text-green-600'
+                              }`}
+                              title="Agree with AI finding"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleOverride(index, 'disagree')}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                finding.override === 'disagree'
+                                  ? 'bg-red-500 text-white'
+                                  : 'bg-gray-200 text-gray-500 hover:bg-red-100 hover:text-red-600'
+                              }`}
+                              title="Disagree / Rule out"
+                            >
+                              <XCircle className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleOverride(index, 'adjust')}
                             className={`p-1.5 rounded-lg transition-colors ${
                               finding.override === 'adjust'
                                 ? 'bg-blue-500 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-600'
+                                : 'bg-gray-200 text-gray-500 hover:bg-blue-100 hover:text-blue-600'
                             }`}
                             title="Adjust confidence"
                           >
@@ -568,7 +741,7 @@ export default function XrayUpload({
                           {finding.override && (
                             <button
                               onClick={() => handleOverride(index, null)}
-                              className="ml-auto text-xs text-gray-400 hover:text-gray-600"
+                              className="ml-auto text-xs text-gray-500 hover:text-gray-700"
                             >
                               Clear
                             </button>
@@ -577,14 +750,27 @@ export default function XrayUpload({
                       </div>
                     )
                   })}
-              </div>
+                </div>
+              )}
 
               <p className="text-xs text-gray-500 mt-4">
-                {isDemoMode
+                {analysis.source === 'lmstudio'
+                  ? 'AI analysis is for decision support only. Clinical correlation and physician judgment are essential.'
+                  : isDemoMode
                   ? 'Demo mode: Results based on image analysis heuristics, not a trained model.'
                   : 'AI analysis is for assistance only. Clinical judgment required.'}
               </p>
             </div>
+          )}
+
+          {/* AI Chat - only for LM Studio analysis */}
+          {analysis && analysis.source === 'lmstudio' && !isLoading && (
+            <XrayAIChat
+              imageBase64={imageBase64}
+              initialAnalysis={vlmRawResponse || undefined}
+              chatHistory={chatHistory}
+              onChatUpdate={handleChatUpdate}
+            />
           )}
         </div>
       )}
@@ -666,4 +852,23 @@ function getOverallRiskWithOverrides(
   if (maxProb > 0.7) return 'high'
   if (maxProb > 0.4) return 'moderate'
   return 'low'
+}
+
+// Map VLM severity to risk level
+function mapVLMSeverityToRisk(
+  severity: 'normal' | 'mild' | 'moderate' | 'severe' | 'critical'
+): 'low' | 'moderate' | 'high' | 'critical' {
+  switch (severity) {
+    case 'normal':
+    case 'mild':
+      return 'low'
+    case 'moderate':
+      return 'moderate'
+    case 'severe':
+      return 'high'
+    case 'critical':
+      return 'critical'
+    default:
+      return 'moderate'
+  }
 }
