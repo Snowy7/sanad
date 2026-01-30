@@ -19,7 +19,7 @@ function App() {
   const { isFirstVisit, completeFirstVisit } = useFirstVisit()
   const { initialize, isLoading, isInitialized } = usePatientStore()
   const { hasCompletedOnboarding } = useOnboardingStore()
-  const [shouldAutoStartTutorial, setShouldAutoStartTutorial] = useState(false)
+  const [_shouldAutoStartTutorial, setShouldAutoStartTutorial] = useState(false)
 
   // Initialize Firebase connection on app start
   useEffect(() => {

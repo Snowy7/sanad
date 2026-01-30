@@ -1,7 +1,7 @@
 import { Loader2, Wifi, WifiOff, AlertCircle, Sparkles, Cpu } from 'lucide-react'
 import { Card } from '../../ui'
 
-type ConnectionStatus = 'checking' | 'connected' | 'disconnected'
+type ConnectionStatus = 'unknown' | 'checking' | 'connected' | 'disconnected' | 'error'
 
 interface ModelSelectorProps {
   currentModel: 'onnx' | 'lmstudio'

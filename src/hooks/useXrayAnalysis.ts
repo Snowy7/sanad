@@ -445,7 +445,7 @@ export function useXrayAnalysis(): UseXrayAnalysisReturn {
   }
 
   // Run LM Studio VLM analysis
-  const analyzeWithLMStudio = async (file: File, base64Image: string): Promise<XrayInferenceResult | null> => {
+  const analyzeWithLMStudio = async (_file: File, base64Image: string): Promise<XrayInferenceResult | null> => {
     const startTime = performance.now()
 
     console.log('Running analysis with LM Studio VLM...')
@@ -466,15 +466,6 @@ export function useXrayAnalysis(): UseXrayAnalysisReturn {
     setVlmRawResponse(rawResponse)
 
     const processingTime = performance.now() - startTime
-
-    // Map VLM severity to risk level for compatibility
-    const severityToRisk: Record<string, number> = {
-      normal: 0.1,
-      mild: 0.25,
-      moderate: 0.5,
-      severe: 0.75,
-      critical: 0.95,
-    }
 
     // Create minimal pathology data (VLM doesn't provide individual probabilities)
     return {

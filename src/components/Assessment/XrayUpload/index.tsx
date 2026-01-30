@@ -47,11 +47,10 @@ export default function XrayUpload({
   const [preview, setPreview] = useState<string | null>(analysis?.imageUrl || null)
   const [isDragging, setIsDragging] = useState(false)
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(analysis?.chatHistory || [])
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const {
     analyze, isLoading, error, isModelLoading, modelLoadingProgress, isDemoMode,
-    heatmaps, selectedHeatmap, setSelectedHeatmap, isLMStudioAvailable,
+    heatmaps, selectedHeatmap, setSelectedHeatmap,
     lmStudioConnectionStatus, vlmRawResponse, checkLMStudioConnection, imageBase64,
   } = useXrayAnalysis()
 

@@ -5,6 +5,10 @@ export interface OnboardingStep {
   description: string
   position: 'top' | 'bottom' | 'left' | 'right' | 'center'
   route?: string // Route to navigate to before showing this step
+  waitForElement?: string // Wait for this element to appear before showing step
+  actionRequired?: 'click' | 'input' | 'navigate' | 'select' | 'view' // User must perform this action
+  waitHint?: string // Hint text while waiting for element
+  actionHint?: string // Hint text for required action
 }
 
 export const onboardingSteps: OnboardingStep[] = [

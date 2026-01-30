@@ -18,7 +18,6 @@ import {
   ref,
   uploadBytes,
   getDownloadURL,
-  deleteObject,
 } from 'firebase/storage'
 import type { Assessment, TriageScore } from '../types'
 

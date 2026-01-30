@@ -19,7 +19,7 @@ export default function ImageUploader({
   onDragOver,
   onDragLeave,
   onFileSelect,
-  onClear,
+  onClear: _onClear,
 }: ImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 

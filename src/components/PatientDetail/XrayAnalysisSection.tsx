@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Flame, Check, XCircle, SlidersHorizontal, Image as ImageIcon, ChevronDown, ChevronUp, Sparkles, MessageSquare } from 'lucide-react'
-import { XrayAnalysis, XrayFinding, ChatMessage } from '../../types'
+import { XrayAnalysis, XrayFinding } from '../../types'
 import { useHeatmapLoader } from '../../hooks/useHeatmapLoader'
 
 interface XrayAnalysisSectionProps {

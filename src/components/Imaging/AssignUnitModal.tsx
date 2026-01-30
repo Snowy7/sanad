@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { X, Truck, Check, AlertCircle } from 'lucide-react'
-import { useMobileUnitStore, MobileUnit, MobileUnitType } from '../../store/mobileUnitStore'
+import { useMobileUnitStore, MobileUnitType } from '../../store/mobileUnitStore'
 import { ImagingType } from '../../types'
 
 interface AssignUnitModalProps {
@@ -21,7 +21,7 @@ const UNIT_TYPE_LABELS: Record<MobileUnitType, string> = {
 export default function AssignUnitModal({
   isOpen,
   onClose,
-  assessmentId,
+  assessmentId: _assessmentId,
   requiredType,
   patientName,
   onAssign,

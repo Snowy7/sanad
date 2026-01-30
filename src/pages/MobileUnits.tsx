@@ -10,7 +10,6 @@ import {
   PowerOff,
   X,
   Check,
-  AlertCircle,
 } from 'lucide-react'
 import { useMobileUnitStore, MobileUnit, MobileUnitType, MobileUnitStatus } from '../store/mobileUnitStore'
 

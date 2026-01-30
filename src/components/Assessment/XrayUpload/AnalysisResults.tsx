@@ -154,7 +154,7 @@ function VLMAnalysisDisplay({ vlm }: { vlm: NonNullable<XrayAnalysis['vlmAnalysi
 function ONNXFindings({
   findings,
   heatmaps,
-  selectedHeatmap,
+  selectedHeatmap: _selectedHeatmap,
   onHeatmapSelect,
   onOverride,
   onConfidenceAdjust,

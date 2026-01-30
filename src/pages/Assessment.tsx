@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Check, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { usePatientStore } from '../store/patientStore'
 import { useChatContext, AssessmentStep } from '../context/ChatContext'
 import { AssessmentFormState, defaultVitals, SYMPTOMS_LIST, Symptom, ImagingRequest } from '../types'
@@ -121,9 +121,11 @@ export default function Assessment() {
     })
     console.log('[SUBMIT] Calculated triage score:', triageScore)
 
+    const patientId = existingAssessment?.patient.id || crypto.randomUUID()
     const assessmentData = {
+      patientId,
       patient: {
-        id: existingAssessment?.patient.id || crypto.randomUUID(),
+        id: patientId,
         name: formState.patient.name || 'Unknown',
         age: formState.patient.age || 0,
         gender: formState.patient.gender || 'other',

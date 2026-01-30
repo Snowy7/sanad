@@ -4,15 +4,11 @@ import {
   Scan,
   Filter,
   SortDesc,
-  Truck,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
   Settings,
 } from 'lucide-react'
 import { usePatientStore } from '../store/patientStore'
 import { useMobileUnitStore } from '../store/mobileUnitStore'
-import { Assessment, ImagingUrgency, ImagingStatus } from '../types'
+import { ImagingUrgency, ImagingStatus } from '../types'
 import ImagingQueueCard from '../components/Imaging/ImagingQueueCard'
 import AssignUnitModal from '../components/Imaging/AssignUnitModal'
 

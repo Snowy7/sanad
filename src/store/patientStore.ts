@@ -290,3 +290,39 @@ export async function deleteHeatmapsForAssessment(assessmentId: string): Promise
     await db.delete('xray-heatmaps', heatmap.id)
   }
 }
+
+// Voice recording functions
+export async function getVoiceRecording(id: string): Promise<Blob | null> {
+  const db = await getDB()
+  const record = await db.get('voice-recordings', id)
+  return record?.blob || null
+}
+
+// Sync queue functions
+export async function getSyncQueue(): Promise<SyncQueueItem[]> {
+  const db = await getDB()
+  return db.getAll('sync-queue')
+}
+
+export async function addToSyncQueue(item: Omit<SyncQueueItem, 'id'>): Promise<string> {
+  const db = await getDB()
+  const id = crypto.randomUUID()
+  await db.put('sync-queue', { ...item, id })
+  return id
+}
+
+export async function removeSyncQueueItem(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('sync-queue', id)
+}
+
+export async function updateSyncQueueItem(
+  id: string,
+  updates: Partial<SyncQueueItem>
+): Promise<void> {
+  const db = await getDB()
+  const existing = await db.get('sync-queue', id)
+  if (existing) {
+    await db.put('sync-queue', { ...existing, ...updates })
+  }
+}
