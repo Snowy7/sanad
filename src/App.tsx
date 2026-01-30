@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import Home from './pages/Home'
@@ -7,12 +7,19 @@ import Queue from './pages/Queue'
 import PatientDetail from './pages/PatientDetail'
 import Settings from './pages/Settings'
 import LandingPage from './pages/LandingPage'
+import ImagingQueue from './pages/ImagingQueue'
+import MobileUnits from './pages/MobileUnits'
+import { OnboardingProvider } from './components/Onboarding'
+import { ChatProvider } from './context/ChatContext'
 import { useFirstVisit } from './hooks/useFirstVisit'
 import { usePatientStore } from './store/patientStore'
+import { useOnboardingStore } from './store/onboardingStore'
 
 function App() {
   const { isFirstVisit, completeFirstVisit } = useFirstVisit()
   const { initialize, isLoading, isInitialized } = usePatientStore()
+  const { hasCompletedOnboarding } = useOnboardingStore()
+  const [shouldAutoStartTutorial, setShouldAutoStartTutorial] = useState(false)
 
   // Initialize Firebase connection on app start
   useEffect(() => {
@@ -21,9 +28,18 @@ function App() {
     }
   }, [initialize, isInitialized])
 
+  // Handle landing page completion - trigger tutorial after first visit
+  const handleGetStarted = () => {
+    completeFirstVisit()
+    // Auto-start tutorial if user hasn't completed it before
+    if (!hasCompletedOnboarding) {
+      setShouldAutoStartTutorial(true)
+    }
+  }
+
   // Show landing page on first visit
   if (isFirstVisit) {
-    return <LandingPage onGetStarted={completeFirstVisit} />
+    return <LandingPage onGetStarted={handleGetStarted} />
   }
 
   // Show loading state while Firebase initializes
@@ -39,16 +55,22 @@ function App() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/assessment" element={<Assessment />} />
-        <Route path="/assessment/:patientId" element={<Assessment />} />
-        <Route path="/queue" element={<Queue />} />
-        <Route path="/patient/:patientId" element={<PatientDetail />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
-    </Layout>
+    <ChatProvider>
+      <OnboardingProvider autoStart={false}>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/assessment" element={<Assessment />} />
+            <Route path="/assessment/:patientId" element={<Assessment />} />
+            <Route path="/queue" element={<Queue />} />
+            <Route path="/imaging-queue" element={<ImagingQueue />} />
+            <Route path="/mobile-units" element={<MobileUnits />} />
+            <Route path="/patient/:patientId" element={<PatientDetail />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </Layout>
+      </OnboardingProvider>
+    </ChatProvider>
   )
 }
 

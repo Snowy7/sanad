@@ -47,7 +47,7 @@ export default function SymptomsChecklist({
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <div className="bg-primary-100 p-3 rounded-xl">
-          <Stethoscope className="w-6 h-6 text-primary-700" />
+          <Stethoscope className="w-6 h-6 text-primary-600" />
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900">Symptoms</h2>
@@ -57,7 +57,7 @@ export default function SymptomsChecklist({
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3" data-onboarding="symptoms-checklist">
         {categories.map((category) => {
           const symptoms = getCategorySymptoms(category.id)
           const selectedCount = getSelectedCountForCategory(category.id)
@@ -105,7 +105,7 @@ export default function SymptomsChecklist({
                         onClick={() => toggleSymptom(symptom.id)}
                         className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
                           isSelected
-                            ? 'bg-primary-50 border-2 border-primary-200'
+                            ? 'bg-primary-50 border-2 border-primary-300'
                             : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
                         }`}
                       >
@@ -120,7 +120,7 @@ export default function SymptomsChecklist({
                         </div>
                         <span
                           className={`flex-1 text-left font-medium ${
-                            isSelected ? 'text-primary-900' : 'text-gray-700'
+                            isSelected ? 'text-gray-900' : 'text-gray-700'
                           }`}
                         >
                           {symptom.name}
@@ -140,7 +140,7 @@ export default function SymptomsChecklist({
 
       {/* Quick selection for critical symptoms */}
       <div className="card bg-red-50 border-red-200">
-        <h3 className="font-semibold text-red-800 mb-3">Critical Symptoms</h3>
+        <h3 className="font-semibold text-red-700 mb-3">Critical Symptoms</h3>
         <div className="flex flex-wrap gap-2">
           {SYMPTOMS_LIST.filter((s) => s.severity >= 9).map((symptom) => {
             const isSelected = selectedSymptoms.includes(symptom.id)
@@ -151,7 +151,7 @@ export default function SymptomsChecklist({
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isSelected
                     ? 'bg-red-600 text-white'
-                    : 'bg-white text-red-700 border border-red-300 hover:bg-red-100'
+                    : 'bg-white text-red-600 border border-red-200 hover:bg-red-100'
                 }`}
               >
                 {symptom.name}

@@ -11,7 +11,7 @@ export default function PatientInfo({ patient, onChange }: PatientInfoProps) {
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <div className="bg-primary-100 p-3 rounded-xl">
-          <User className="w-6 h-6 text-primary-700" />
+          <User className="w-6 h-6 text-primary-600" />
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900">Patient Information</h2>
@@ -19,7 +19,7 @@ export default function PatientInfo({ patient, onChange }: PatientInfoProps) {
         </div>
       </div>
 
-      <div className="card space-y-4">
+      <div className="card space-y-4" data-onboarding="patient-info-form">
         <div>
           <label htmlFor="name" className="label">
             Patient Name

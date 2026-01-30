@@ -54,13 +54,13 @@ export default function InstallPrompt() {
 
   if (isInstalled) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-        <div className="bg-green-100 p-2 rounded-lg">
-          <Smartphone className="w-5 h-5 text-green-600" />
+      <div className="glass-dark rounded-xl p-4 flex items-center gap-3">
+        <div className="bg-green-500/20 p-2 rounded-lg">
+          <Smartphone className="w-5 h-5 text-green-400" />
         </div>
         <div>
-          <p className="font-medium text-green-800">App Installed</p>
-          <p className="text-sm text-green-600">SANAD is ready to work offline</p>
+          <p className="font-medium text-green-400">App Installed</p>
+          <p className="text-sm text-slate-400">SANAD is ready to work offline</p>
         </div>
       </div>
     )
@@ -70,24 +70,24 @@ export default function InstallPrompt() {
     return (
       <button
         onClick={handleInstall}
-        className="w-full bg-primary-600 hover:bg-primary-700 text-white rounded-xl p-4 flex items-center justify-center gap-3 transition-colors"
+        className="w-full glass-dark hover:bg-slate-700/80 rounded-xl p-4 flex items-center justify-center gap-3 transition-colors"
       >
-        <Download className="w-5 h-5" />
-        <span className="font-medium">Install App for Offline Use</span>
+        <Download className="w-5 h-5 text-primary-400" />
+        <span className="font-medium text-white">Install App for Offline Use</span>
       </button>
     )
   }
 
   // Show instructions for manual installation
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+    <div className="glass-dark rounded-xl p-4">
       <div className="flex items-center gap-3 mb-2">
-        <div className="bg-gray-100 p-2 rounded-lg">
-          <Download className="w-5 h-5 text-gray-600" />
+        <div className="bg-slate-700 p-2 rounded-lg">
+          <Download className="w-5 h-5 text-slate-300" />
         </div>
-        <p className="font-medium text-gray-800">Install for Offline Use</p>
+        <p className="font-medium text-white">Install for Offline Use</p>
       </div>
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-slate-400">
         Add to Home Screen from your browser menu for the best offline experience.
       </p>
     </div>

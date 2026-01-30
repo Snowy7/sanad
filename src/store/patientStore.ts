@@ -1,156 +1,155 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { firebaseService } from '../lib/firebase'
 import type {
   Assessment,
-  VoiceNote,
   TriageScore,
+  ImagingRequest,
 } from '../types'
 
 interface PatientState {
   assessments: Assessment[]
-  addAssessment: (assessment: Omit<Assessment, 'id' | 'patientId' | 'createdAt' | 'updatedAt'>) => string
-  updateAssessment: (id: string, data: Partial<Assessment>) => void
-  deleteAssessment: (id: string) => void
+  isLoading: boolean
+  error: string | null
+  isInitialized: boolean
+
+  // Actions
+  initialize: () => void
+  addAssessment: (assessment: Omit<Assessment, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>
+  updateAssessment: (id: string, data: Partial<Assessment>) => Promise<void>
+  deleteAssessment: (id: string) => Promise<void>
   getAssessmentById: (id: string) => Assessment | undefined
-  updateTriagePriority: (assessmentId: string, triageScore: TriageScore) => void
+  updateTriagePriority: (assessmentId: string, triageScore: TriageScore) => Promise<void>
+  updateImagingRequest: (assessmentId: string, imagingRequest: ImagingRequest) => Promise<void>
 }
 
-export const usePatientStore = create<PatientState>()(
-  persist(
-    (set, get) => ({
-      assessments: [],
+export const usePatientStore = create<PatientState>()((set, get) => ({
+  assessments: [],
+  isLoading: true,
+  error: null,
+  isInitialized: false,
 
-      addAssessment: (assessmentData) => {
-        const id = crypto.randomUUID()
-        const now = new Date()
+  // Initialize and subscribe to real-time updates
+  initialize: () => {
+    if (get().isInitialized) return
 
-        const newAssessment: Assessment = {
-          id,
-          patientId: assessmentData.patient.id,
-          patient: assessmentData.patient,
-          vitals: assessmentData.vitals,
-          symptoms: assessmentData.symptoms,
-          xrayAnalysis: assessmentData.xrayAnalysis,
-          voiceNotes: assessmentData.voiceNotes,
-          additionalNotes: assessmentData.additionalNotes,
-          triageScore: assessmentData.triageScore,
-          createdAt: now,
-          updatedAt: now,
-        }
+    set({ isInitialized: true })
 
-        set((state) => ({
-          assessments: [...state.assessments, newAssessment],
-        }))
+    // Subscribe to real-time updates from Firebase
+    const unsubscribe = firebaseService.subscribeToAssessments((assessments) => {
+      set({ assessments, isLoading: false, error: null })
+    })
 
-        return id
-      },
+    // Return unsubscribe function for cleanup
+    return unsubscribe
+  },
 
-      updateAssessment: (id, data) => {
-        set((state) => ({
-          assessments: state.assessments.map((a) =>
-            a.id === id
-              ? {
-                  ...a,
-                  ...data,
-                  updatedAt: new Date(),
-                }
-              : a
-          ),
-        }))
-      },
+  // Add new assessment
+  addAssessment: async (assessmentData) => {
+    console.log('[STORE] addAssessment called')
+    try {
+      set({ error: null })
+      const now = new Date()
 
-      deleteAssessment: (id) => {
-        set((state) => ({
-          assessments: state.assessments.filter((a) => a.id !== id),
-        }))
-      },
+      // Build base assessment
+      const newAssessment: Record<string, any> = {
+        patientId: assessmentData.patient.id,
+        patient: assessmentData.patient,
+        vitals: assessmentData.vitals,
+        symptoms: assessmentData.symptoms,
+        voiceNotes: assessmentData.voiceNotes || [],
+        additionalNotes: assessmentData.additionalNotes || '',
+        triageScore: assessmentData.triageScore,
+        createdAt: now,
+        updatedAt: now,
+      }
 
-      getAssessmentById: (id) => {
-        return get().assessments.find((a) => a.id === id)
-      },
+      // Only add optional fields if they have values (Firebase rejects undefined/null)
+      if (assessmentData.xrayAnalysis) {
+        newAssessment.xrayAnalysis = assessmentData.xrayAnalysis
+      }
+      if (assessmentData.imagingRequest) {
+        newAssessment.imagingRequest = assessmentData.imagingRequest
+      }
 
-      updateTriagePriority: (assessmentId, triageScore) => {
-        set((state) => ({
-          assessments: state.assessments.map((a) =>
-            a.id === assessmentId
-              ? {
-                  ...a,
-                  triageScore,
-                  updatedAt: new Date(),
-                }
-              : a
-          ),
-        }))
-      },
-    }),
-    {
-      name: 'sanad-patients',
-      version: 1,
-      // Custom serialization to handle Date objects
-      storage: {
-        getItem: (name) => {
-          const str = localStorage.getItem(name)
-          if (!str) return null
-          const data = JSON.parse(str)
-          // Restore Date objects
-          if (data.state?.assessments) {
-            data.state.assessments = data.state.assessments.map((a: Assessment) => ({
-              ...a,
-              createdAt: new Date(a.createdAt),
-              updatedAt: new Date(a.updatedAt),
-              patient: {
-                ...a.patient,
-                createdAt: new Date(a.patient.createdAt),
-                updatedAt: new Date(a.patient.updatedAt),
-              },
-              xrayAnalysis: a.xrayAnalysis
-                ? {
-                    ...a.xrayAnalysis,
-                    analyzedAt: new Date(a.xrayAnalysis.analyzedAt),
-                  }
-                : null,
-              voiceNotes: a.voiceNotes.map((n: VoiceNote) => ({
-                ...n,
-                createdAt: new Date(n.createdAt),
-              })),
-              triageScore: a.triageScore
-                ? {
-                    ...a.triageScore,
-                    overriddenAt: a.triageScore.overriddenAt
-                      ? new Date(a.triageScore.overriddenAt)
-                      : undefined,
-                  }
-                : null,
-            }))
-          }
-          return data
-        },
-        setItem: (name, value) => {
-          localStorage.setItem(name, JSON.stringify(value))
-        },
-        removeItem: (name) => {
-          localStorage.removeItem(name)
-        },
-      },
+      console.log('[STORE] Calling Firebase addAssessment...')
+      const id = await firebaseService.addAssessment(newAssessment as any)
+      console.log('[STORE] Firebase returned ID:', id)
+      return id
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to add assessment'
+      set({ error: message })
+      throw error
     }
-  )
-)
+  },
 
-// IndexedDB storage for better offline support with large data
-// This can be used for storing audio blobs and X-ray images
+  // Update assessment
+  updateAssessment: async (id, data) => {
+    try {
+      set({ error: null })
+      await firebaseService.updateAssessment(id, data)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update assessment'
+      set({ error: message })
+      throw error
+    }
+  },
+
+  // Delete assessment
+  deleteAssessment: async (id) => {
+    try {
+      set({ error: null })
+      await firebaseService.deleteAssessment(id)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete assessment'
+      set({ error: message })
+      throw error
+    }
+  },
+
+  // Get assessment by ID (from local state)
+  getAssessmentById: (id) => {
+    return get().assessments.find((a) => a.id === id)
+  },
+
+  // Update triage priority
+  updateTriagePriority: async (assessmentId, triageScore) => {
+    try {
+      set({ error: null })
+      await firebaseService.updateTriagePriority(assessmentId, triageScore)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update triage priority'
+      set({ error: message })
+      throw error
+    }
+  },
+
+  // Update imaging request
+  updateImagingRequest: async (assessmentId, imagingRequest) => {
+    try {
+      set({ error: null })
+      await firebaseService.updateAssessment(assessmentId, { imagingRequest })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update imaging request'
+      set({ error: message })
+      throw error
+    }
+  },
+}))
+
+// Legacy IndexedDB exports for backward compatibility with X-ray heatmaps
+// These are kept for local caching of large binary data
 import { openDB, DBSchema, IDBPDatabase } from 'idb'
 
-// Sync operation types
-export type SyncOperation = 'create' | 'update' | 'delete';
+export type SyncOperation = 'create' | 'update' | 'delete'
 
 export interface SyncQueueItem {
-  id: string;
-  assessmentId: string;
-  operation: SyncOperation;
-  data?: Partial<Assessment>;
-  timestamp: Date;
-  retryCount: number;
-  error?: string;
+  id: string
+  assessmentId: string
+  operation: SyncOperation
+  data?: Partial<Assessment>
+  timestamp: Date
+  retryCount: number
+  error?: string
 }
 
 interface SanadDB extends DBSchema {
@@ -198,15 +197,12 @@ export async function getDB(): Promise<IDBPDatabase<SanadDB>> {
 
   db = await openDB<SanadDB>('sanad-db', 2, {
     upgrade(database, oldVersion) {
-      // Version 1 stores
       if (!database.objectStoreNames.contains('xray-images')) {
         database.createObjectStore('xray-images', { keyPath: 'id' })
       }
       if (!database.objectStoreNames.contains('voice-recordings')) {
         database.createObjectStore('voice-recordings', { keyPath: 'id' })
       }
-
-      // Version 2 stores (sync & heatmaps)
       if (oldVersion < 2) {
         if (!database.objectStoreNames.contains('xray-heatmaps')) {
           database.createObjectStore('xray-heatmaps', { keyPath: 'id' })
@@ -243,30 +239,6 @@ export async function getXrayImage(id: string): Promise<Blob | null> {
   return record?.blob || null
 }
 
-export async function saveVoiceRecording(
-  assessmentId: string,
-  blob: Blob,
-  transcript: string
-): Promise<string> {
-  const db = await getDB()
-  const id = crypto.randomUUID()
-  await db.put('voice-recordings', {
-    id,
-    assessmentId,
-    blob,
-    transcript,
-    createdAt: new Date(),
-  })
-  return id
-}
-
-export async function getVoiceRecording(id: string): Promise<Blob | null> {
-  const db = await getDB()
-  const record = await db.get('voice-recordings', id)
-  return record?.blob || null
-}
-
-// Heatmap storage functions
 export async function saveHeatmap(
   assessmentId: string,
   pathology: string,
@@ -317,44 +289,4 @@ export async function deleteHeatmapsForAssessment(assessmentId: string): Promise
   for (const heatmap of toDelete) {
     await db.delete('xray-heatmaps', heatmap.id)
   }
-}
-
-// Sync queue functions
-export async function addToSyncQueue(item: Omit<SyncQueueItem, 'id'>): Promise<string> {
-  const db = await getDB()
-  const id = crypto.randomUUID()
-  await db.put('sync-queue', {
-    ...item,
-    id,
-  })
-  return id
-}
-
-export async function getSyncQueue(): Promise<SyncQueueItem[]> {
-  const db = await getDB()
-  const items = await db.getAll('sync-queue')
-  return items.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-}
-
-export async function getSyncQueueForAssessment(assessmentId: string): Promise<SyncQueueItem[]> {
-  const db = await getDB()
-  return db.getAllFromIndex('sync-queue', 'by-assessment', assessmentId)
-}
-
-export async function updateSyncQueueItem(id: string, updates: Partial<SyncQueueItem>): Promise<void> {
-  const db = await getDB()
-  const item = await db.get('sync-queue', id)
-  if (item) {
-    await db.put('sync-queue', { ...item, ...updates })
-  }
-}
-
-export async function removeSyncQueueItem(id: string): Promise<void> {
-  const db = await getDB()
-  await db.delete('sync-queue', id)
-}
-
-export async function clearSyncQueue(): Promise<void> {
-  const db = await getDB()
-  await db.clear('sync-queue')
 }

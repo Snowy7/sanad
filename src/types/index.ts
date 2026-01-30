@@ -3,6 +3,46 @@
 // X-ray analysis source types
 export type XrayAnalysisSource = 'onnx' | 'lmstudio'
 
+// Imaging prioritization types
+export type ImagingUrgency = 'critical' | 'high' | 'routine' | 'not-required'
+export type ImagingStatus = 'pending' | 'in-progress' | 'completed' | 'not-needed'
+export type ImagingType = 'xray' | 'ultrasound' | 'both'
+export type BodyRegion = 'chest' | 'abdomen' | 'extremity' | 'head' | 'spine' | 'multiple'
+
+export interface ImagingUrgencyFactor {
+  name: string
+  category: 'vital' | 'symptom'
+  contribution: number
+  description: string
+}
+
+export interface ImagingRequest {
+  urgency: ImagingUrgency
+  urgencyScore: number           // 0-100
+  urgencyFactors: ImagingUrgencyFactor[]
+  status: ImagingStatus
+  requestedAt: Date
+  imagingType: ImagingType
+  bodyRegion: BodyRegion
+  clinicalIndication: string
+  mobileUnit?: { unitId: string; unitName: string; assignedAt: Date }
+  completedAt?: Date
+}
+
+export const IMAGING_URGENCY_COLORS: Record<ImagingUrgency, { bg: string; text: string; border: string }> = {
+  critical: { bg: 'bg-red-500', text: 'text-white', border: 'border-red-600' },
+  high: { bg: 'bg-orange-500', text: 'text-white', border: 'border-orange-600' },
+  routine: { bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-600' },
+  'not-required': { bg: 'bg-gray-200', text: 'text-gray-700', border: 'border-gray-300' },
+}
+
+export const IMAGING_URGENCY_LABELS: Record<ImagingUrgency, string> = {
+  critical: 'CRITICAL',
+  high: 'HIGH',
+  routine: 'ROUTINE',
+  'not-required': 'NOT REQUIRED',
+}
+
 // Chat message type for AI conversations
 export interface ChatMessage {
   id: string
@@ -114,6 +154,7 @@ export interface Assessment {
   voiceNotes: VoiceNote[];
   additionalNotes: string;
   triageScore: TriageScore | null;
+  imagingRequest?: ImagingRequest;
   createdAt: Date;
   updatedAt: Date;
   // Sync metadata for offline-first architecture
@@ -175,13 +216,15 @@ export interface WhisperTranscriptionResult {
 // Form State Types
 
 export interface AssessmentFormState {
-  step: 'patient-info' | 'vitals' | 'symptoms' | 'xray' | 'voice' | 'review';
+  step: 'patient-info' | 'vitals' | 'symptoms' | 'imaging-decision' | 'xray' | 'voice' | 'review';
   patient: Partial<Patient>;
   vitals: Vitals;
   selectedSymptoms: string[];
   xrayImage: File | null;
   voiceNotes: VoiceNote[];
   additionalNotes: string;
+  imagingRequest?: ImagingRequest;
+  skipImaging?: boolean;
 }
 
 // Default values

@@ -107,7 +107,7 @@ export default function VitalsForm({ vitals, onChange }: VitalsFormProps) {
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <div className="bg-primary-100 p-3 rounded-xl">
-          <Activity className="w-6 h-6 text-primary-700" />
+          <Activity className="w-6 h-6 text-primary-600" />
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900">Vital Signs</h2>
@@ -115,31 +115,31 @@ export default function VitalsForm({ vitals, onChange }: VitalsFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4" data-onboarding="vitals-form">
         {vitalFields.map((field) => {
           const Icon = field.icon
           const status = getVitalStatus(field.key, vitals[field.key])
           const statusColors = {
-            normal: 'border-gray-200',
-            warning: 'border-amber-400 bg-amber-50',
-            critical: 'border-red-400 bg-red-50',
+            normal: 'border-gray-200 bg-white',
+            warning: 'border-amber-300 bg-amber-50',
+            critical: 'border-red-300 bg-red-50',
           }
 
           return (
             <div
               key={field.key}
-              className={`card p-4 ${statusColors[status]} transition-colors`}
+              className={`rounded-2xl p-4 border ${statusColors[status]} transition-colors`}
             >
               <div className="flex items-center gap-2 mb-2">
                 <Icon className="w-4 h-4 text-gray-500" />
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-gray-600">
                   {field.label}
                 </label>
               </div>
               <div className="flex items-baseline gap-2">
                 <input
                   type="number"
-                  className="w-full text-2xl font-semibold bg-transparent border-none p-0 focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full text-2xl font-semibold bg-transparent border-none p-0 focus:outline-none focus:ring-0 text-gray-900 placeholder-gray-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   placeholder={field.placeholder}
                   min={field.min}
                   max={field.max}

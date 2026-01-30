@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Server, Cpu, Sparkles, Wifi, WifiOff, Loader2, Check, AlertCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Settings as SettingsIcon, Server, Cpu, Sparkles, Wifi, WifiOff, Loader2, Check, AlertCircle, HelpCircle, RotateCcw } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
+import { useOnboardingStore } from '../store/onboardingStore'
 import { lmStudioService } from '../services/lmStudioService'
 
 export default function Settings() {
+  const navigate = useNavigate()
   const {
     xrayModel,
     setXrayModel,
@@ -13,6 +16,8 @@ export default function Settings() {
     setLMStudioConnectionStatus,
     lmStudioConnectionError,
   } = useSettingsStore()
+
+  const { startTutorial, hasCompletedOnboarding } = useOnboardingStore()
 
   const [serverUrl, setServerUrl] = useState(lmStudioConfig.serverUrl)
   const [modelName, setModelName] = useState(lmStudioConfig.modelName)
@@ -66,6 +71,14 @@ export default function Settings() {
     })
     setSaveStatus('saved')
     setTimeout(() => setSaveStatus('idle'), 2000)
+  }
+
+  const handleRestartTutorial = () => {
+    navigate('/')
+    // Small delay to ensure navigation completes
+    setTimeout(() => {
+      startTutorial()
+    }, 100)
   }
 
   return (
@@ -323,6 +336,26 @@ export default function Settings() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Help & Tutorial */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-4">
+          <HelpCircle className="w-5 h-5 text-gray-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Help & Tutorial</h2>
+        </div>
+
+        <p className="text-sm text-gray-600 mb-4">
+          Take a guided tour through SANAD's features to learn how to effectively use the triage system.
+        </p>
+
+        <button
+          onClick={handleRestartTutorial}
+          className="btn-secondary flex items-center gap-2"
+        >
+          <RotateCcw className="w-4 h-4" />
+          {hasCompletedOnboarding ? 'Restart Tutorial' : 'Start Tutorial'}
+        </button>
       </div>
 
       {/* Info Card */}

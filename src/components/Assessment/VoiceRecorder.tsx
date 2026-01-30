@@ -76,7 +76,7 @@ export default function VoiceRecorder({
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <div className="bg-primary-100 p-3 rounded-xl">
-          <Mic className="w-6 h-6 text-primary-700" />
+          <Mic className="w-6 h-6 text-primary-600" />
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900">Voice Notes</h2>
@@ -92,15 +92,15 @@ export default function VoiceRecorder({
           <div className="flex items-center gap-3">
             <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
             <div className="flex-1">
-              <p className="font-medium text-blue-800">Loading speech model...</p>
+              <p className="font-medium text-blue-700">Loading speech model...</p>
               <p className="text-sm text-blue-600">
                 {modelLoadingProgress}% - This only happens once
               </p>
             </div>
           </div>
-          <div className="mt-2 h-2 bg-blue-200 rounded-full overflow-hidden">
+          <div className="mt-2 h-2 bg-blue-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-600 transition-all"
+              className="h-full bg-blue-500 transition-all"
               style={{ width: `${modelLoadingProgress}%` }}
             />
           </div>
@@ -115,7 +115,7 @@ export default function VoiceRecorder({
           className={`w-20 h-20 rounded-full flex items-center justify-center transition-all ${
             isRecording
               ? 'bg-red-500 hover:bg-red-600 animate-pulse'
-              : 'bg-primary-600 hover:bg-primary-700'
+              : 'bg-primary-600 hover:bg-primary-500'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {isTranscribing ? (
@@ -126,7 +126,7 @@ export default function VoiceRecorder({
             <Mic className="w-8 h-8 text-white" />
           )}
         </button>
-        <p className="mt-4 text-gray-600 font-medium">
+        <p className="mt-4 text-gray-700 font-medium">
           {isTranscribing
             ? 'Transcribing...'
             : isRecording
@@ -136,7 +136,7 @@ export default function VoiceRecorder({
 
         {/* Live Transcript */}
         {transcript && isRecording && (
-          <div className="mt-4 p-3 bg-gray-100 rounded-lg w-full">
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg w-full">
             <p className="text-sm text-gray-700">{transcript}</p>
           </div>
         )}
@@ -163,7 +163,7 @@ export default function VoiceRecorder({
                   <div className="flex gap-2 justify-end">
                     <button
                       onClick={cancelEdit}
-                      className="p-2 text-gray-500 hover:text-gray-700"
+                      className="p-2 text-gray-400 hover:text-gray-600"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -179,7 +179,7 @@ export default function VoiceRecorder({
                 <>
                   <p className="text-gray-700">{note.transcript}</p>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-400">
                       {new Date(note.createdAt).toLocaleTimeString()}
                     </span>
                     <div className="flex gap-2">

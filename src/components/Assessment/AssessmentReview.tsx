@@ -25,7 +25,7 @@ export default function AssessmentReview({
     immediate: 'bg-red-500 text-white',
     urgent: 'bg-amber-500 text-white',
     delayed: 'bg-green-500 text-white',
-    minimal: 'bg-gray-200 text-gray-800',
+    minimal: 'bg-gray-400 text-white',
   }
 
   const priorityLabels = {
@@ -39,7 +39,7 @@ export default function AssessmentReview({
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <div className="bg-primary-100 p-3 rounded-xl">
-          <ClipboardCheck className="w-6 h-6 text-primary-700" />
+          <ClipboardCheck className="w-6 h-6 text-primary-600" />
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900">Review Assessment</h2>
@@ -57,7 +57,7 @@ export default function AssessmentReview({
         >
           {priorityLabels[previewScore.priority]}
         </div>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-gray-500">
           Score: {previewScore.score}/100
         </p>
         <p className="mt-3 text-gray-700">{previewScore.recommendation}</p>
@@ -69,22 +69,22 @@ export default function AssessmentReview({
           <User className="w-5 h-5 text-gray-500" />
           <h3 className="font-semibold text-gray-900">Patient Information</h3>
         </div>
-        <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
           <div>
             <span className="text-gray-500">Name:</span>{' '}
-            <span className="font-medium">
+            <span className="font-medium text-gray-900">
               {formState.patient.name || 'Not provided'}
             </span>
           </div>
           <div>
             <span className="text-gray-500">Age:</span>{' '}
-            <span className="font-medium">
+            <span className="font-medium text-gray-900">
               {formState.patient.age || 'Not provided'}
             </span>
           </div>
           <div>
             <span className="text-gray-500">Gender:</span>{' '}
-            <span className="font-medium capitalize">
+            <span className="font-medium text-gray-900 capitalize">
               {formState.patient.gender || 'Not provided'}
             </span>
           </div>
@@ -92,7 +92,7 @@ export default function AssessmentReview({
         {formState.patient.chiefComplaint && (
           <div className="mt-3 pt-3 border-t border-gray-100">
             <span className="text-sm text-gray-500">Chief Complaint:</span>
-            <p className="font-medium">{formState.patient.chiefComplaint}</p>
+            <p className="font-medium text-gray-900">{formState.patient.chiefComplaint}</p>
           </div>
         )}
       </div>
@@ -103,10 +103,10 @@ export default function AssessmentReview({
           <Activity className="w-5 h-5 text-gray-500" />
           <h3 className="font-semibold text-gray-900">Vital Signs</h3>
         </div>
-        <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
           <div>
             <span className="text-gray-500">BP:</span>{' '}
-            <span className="font-medium">
+            <span className="font-medium text-gray-900">
               {formState.vitals.bloodPressureSystolic &&
               formState.vitals.bloodPressureDiastolic
                 ? `${formState.vitals.bloodPressureSystolic}/${formState.vitals.bloodPressureDiastolic} mmHg`
@@ -115,7 +115,7 @@ export default function AssessmentReview({
           </div>
           <div>
             <span className="text-gray-500">HR:</span>{' '}
-            <span className="font-medium">
+            <span className="font-medium text-gray-900">
               {formState.vitals.heartRate
                 ? `${formState.vitals.heartRate} bpm`
                 : '--'}
@@ -123,7 +123,7 @@ export default function AssessmentReview({
           </div>
           <div>
             <span className="text-gray-500">RR:</span>{' '}
-            <span className="font-medium">
+            <span className="font-medium text-gray-900">
               {formState.vitals.respiratoryRate
                 ? `${formState.vitals.respiratoryRate}/min`
                 : '--'}
@@ -131,7 +131,7 @@ export default function AssessmentReview({
           </div>
           <div>
             <span className="text-gray-500">SpO2:</span>{' '}
-            <span className="font-medium">
+            <span className="font-medium text-gray-900">
               {formState.vitals.oxygenSaturation
                 ? `${formState.vitals.oxygenSaturation}%`
                 : '--'}
@@ -139,7 +139,7 @@ export default function AssessmentReview({
           </div>
           <div>
             <span className="text-gray-500">Temp:</span>{' '}
-            <span className="font-medium">
+            <span className="font-medium text-gray-900">
               {formState.vitals.temperature
                 ? `${formState.vitals.temperature}°C`
                 : '--'}
@@ -163,9 +163,9 @@ export default function AssessmentReview({
                 key={symptom.id}
                 className={`px-2 py-1 rounded text-sm ${
                   symptom.severity >= 8
-                    ? 'bg-red-100 text-red-700'
+                    ? 'bg-red-50 text-red-700'
                     : symptom.severity >= 5
-                    ? 'bg-amber-100 text-amber-700'
+                    ? 'bg-amber-50 text-amber-700'
                     : 'bg-gray-100 text-gray-700'
                 }`}
               >
@@ -186,17 +186,17 @@ export default function AssessmentReview({
           <div
             className={`inline-block px-2 py-1 rounded text-sm font-medium capitalize ${
               xrayAnalysis.overallRisk === 'critical'
-                ? 'bg-red-100 text-red-700'
+                ? 'bg-red-50 text-red-700'
                 : xrayAnalysis.overallRisk === 'high'
-                ? 'bg-orange-100 text-orange-700'
+                ? 'bg-orange-50 text-orange-700'
                 : xrayAnalysis.overallRisk === 'moderate'
-                ? 'bg-amber-100 text-amber-700'
-                : 'bg-green-100 text-green-700'
+                ? 'bg-amber-50 text-amber-700'
+                : 'bg-green-50 text-green-700'
             }`}
           >
             Risk: {xrayAnalysis.overallRisk}
           </div>
-          <div className="mt-2 text-sm text-gray-600">
+          <div className="mt-2 text-sm text-gray-500">
             {xrayAnalysis.findings.filter((f) => f.confidence > 0.3).length}{' '}
             significant finding(s) detected
           </div>
@@ -211,7 +211,7 @@ export default function AssessmentReview({
             <h3 className="font-semibold text-gray-900">Notes</h3>
           </div>
           {formState.voiceNotes.length > 0 && (
-            <p className="text-sm text-gray-600 mb-2">
+            <p className="text-sm text-gray-500 mb-2">
               {formState.voiceNotes.length} voice note(s) recorded
             </p>
           )}
@@ -237,7 +237,7 @@ export default function AssessmentReview({
             .map((factor, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
                 <span className="text-gray-700">{factor.name}</span>
-                <span className="font-medium text-primary-700">
+                <span className="font-medium text-primary-600">
                   +{Math.round(factor.contribution)}
                 </span>
               </div>
